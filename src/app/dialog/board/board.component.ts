@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { GameService } from './game.service';
-import { CardComponent } from "../../card/card.component";
+import { CardComponent } from './card/card.component';
 import { CommonModule } from '@angular/common';
 
 
