@@ -2,16 +2,15 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-card',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-card',
+    imports: [CommonModule],
+    template: `
     <div class="card" [class.flipped]="flipped" (click)="onClick()">
       <img *ngIf="flipped" [src]="image" />
       <div *ngIf="!flipped" class="card-back"></div>
     </div>
   `,
-  styleUrls: ['./card.component.css']
+    styleUrls: ['./card.component.css']
 })
 export class CardComponent {
   @Input() image!: string;
