@@ -5,6 +5,7 @@ import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component'
 
 @Component({
     selector: 'app-menu',
+    imports: [],
     templateUrl: './menu.component.html',
     styleUrl: './menu.component.css'
 })
