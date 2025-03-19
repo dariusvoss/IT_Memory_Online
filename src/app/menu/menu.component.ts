@@ -4,11 +4,10 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 
 @Component({
-  selector: 'app-menu',
-  standalone: true,
-  imports: [],
-  templateUrl: './menu.component.html',
-  styleUrl: './menu.component.css'
+    selector: 'app-menu',
+    imports: [],
+    templateUrl: './menu.component.html',
+    styleUrl: './menu.component.css'
 })
 export class MenuComponent {
   constructor(private modalService: NgbModal) {}

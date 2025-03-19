@@ -4,11 +4,10 @@ import { BoardComponent } from './board/board.component';
 import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-dialog',
-  standalone: true,
-  imports: [BoardComponent, CommonModule],
-  templateUrl: './dialog.component.html',
-  styleUrls: ['./dialog.component.css'],
+    selector: 'app-dialog',
+    imports: [BoardComponent, CommonModule],
+    templateUrl: './dialog.component.html',
+    styleUrls: ['./dialog.component.css']
 })
 export class DialogComponent {
   constructor(public activeModal: NgbActiveModal) {}
