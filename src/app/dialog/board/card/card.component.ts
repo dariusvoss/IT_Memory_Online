@@ -1,9 +1,7 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-card',
-    imports: [CommonModule],
     template: `
     <div class="card" [class.flipped]="flipped" (click)="onClick()">
       <img *ngIf="flipped" [src]="image" />
