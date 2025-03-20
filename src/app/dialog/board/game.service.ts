@@ -8,14 +8,38 @@ export class GameService {
   private pairsFound = 0;
 
   private cardImages = [
-    'assets/images/Sample_Memory_Card_01.jpg',
-    'assets/images/Sample_Memory_Card_02.jpg',
-    'assets/images/Sample_Memory_Card_03.jpg',
-    'assets/images/Sample_Memory_Card_04.jpg',
-    'assets/images/Sample_Memory_Card_05.jpg',
-    'assets/images/Sample_Memory_Card_06.jpg',
-    'assets/images/Sample_Memory_Card_07.jpg',
-    'assets/images/Sample_Memory_Card_08.jpg'
+    'assets/images/Memory_Card_01.jpg',
+    'assets/images/Memory_Card_02.jpg',
+    'assets/images/Memory_Card_03.jpg',
+    'assets/images/Memory_Card_04.jpg',
+    'assets/images/Memory_Card_05.jpg',
+    'assets/images/Memory_Card_06.jpg',
+    'assets/images/Memory_Card_07.jpg',
+    'assets/images/Memory_Card_08.jpg',
+    'assets/images/Memory_Card_09.jpg',
+    'assets/images/Memory_Card_10.jpg',
+    'assets/images/Memory_Card_11.jpg',
+    'assets/images/Memory_Card_12.jpg',
+    'assets/images/Memory_Card_13.jpg',
+    'assets/images/Memory_Card_14.jpg',
+    'assets/images/Memory_Card_15.jpg',
+    'assets/images/Memory_Card_16.jpg',
+    'assets/images/Memory_Card_17.jpg',
+    'assets/images/Memory_Card_18.jpg',
+    'assets/images/Memory_Card_19.jpg',
+    'assets/images/Memory_Card_20.jpg',
+    'assets/images/Memory_Card_21.jpg',
+    'assets/images/Memory_Card_22.jpg',
+    'assets/images/Memory_Card_23.jpg',
+    'assets/images/Memory_Card_24.jpg',
+    'assets/images/Memory_Card_25.jpg',
+    'assets/images/Memory_Card_26.jpg',
+    'assets/images/Memory_Card_27.jpg',
+    'assets/images/Memory_Card_28.jpg',
+    'assets/images/Memory_Card_29.jpg',
+    'assets/images/Memory_Card_30.jpg',
+    'assets/images/Memory_Card_31.jpg',
+    'assets/images/Memory_Card_32.jpg'
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
@@ -26,7 +50,10 @@ export class GameService {
 
    /** 🔄 Erstellt das Kartendeck und mischt es */
    initializeGame() {
-    this.cards = this.cardImages.flatMap((image, index) => [
+    const selectedSize = parseInt(localStorage.getItem('selectedCardCount') || '16', 10);
+    const selectedImages = this.cardImages.slice(0, selectedSize / 2);  // Nur so viele Bilder wie benötigt
+
+    this.cards = selectedImages.flatMap((image, index) => [
       { id: index, image, flipped: false, matched: false },
       { id: index, image, flipped: false, matched: false },
     ]);
@@ -76,7 +103,7 @@ export class GameService {
     this.selectedCards = [];
 
     // Check, ob alle Paare gefunden wurden
-    if (this.pairsFound === this.cardImages.length) {
+    if (this.pairsFound === this.cards.length / 2) {
       alert('🎉 Glückwunsch! Du hast alle Paare gefunden!');
     }
   }

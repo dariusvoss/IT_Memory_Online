@@ -17,6 +17,6 @@ export class MenuComponent {
   }
 
   openChooseSize() {
-    this.modalService.open(SizeDialogueComponent, { centered: true});
+    this.modalService.open(SizeDialogueComponent, { size: 'md', centered: true });
   }
 }
