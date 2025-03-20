@@ -1,5 +1,4 @@
 .board {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-  }  
+  display: grid;
+  gap: 10px; /* Abstand zwischen den Karten */
+}
