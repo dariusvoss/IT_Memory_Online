@@ -120,7 +120,14 @@ export class GameService {
       // Karten passen zusammen -> bleiben aufgedeckt
       this.selectedCards.forEach((card) => (card.matched = true));
       this.pairsFound++;
-      // console.log('Paar gefunden!');
+      if (this.difficulty === 'none' || this.isPlayerTurn) {
+        this.pairsFoundPlayer++;
+        // console.log('Paar gefunden! Spieler');
+      }
+      else {  // Bot
+        this.pairsFoundBot++; // Bot hat ein Paar gefunden 
+        // console.log('Paar gefunden! Bot');
+      }
       isPair = true;
     } else {
       // Karten passen nicht -> umdrehen
@@ -128,39 +135,41 @@ export class GameService {
       // console.log('Kein Paar gefunden!');
     }
 
+    // console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
+
     this.selectedCards = [];
 
     // Check, ob alle Paare gefunden wurden
-    if (this.pairsFound === this.cardImages.length) {
-      this.timerService.stopTimer();
-      let finTime = this.timerService.getFomateTimer();
-
-      if (this.difficulty !== 'none') {
-        if (this.pairsFoundPlayer > this.pairsFoundBot) {
-          alert('🎉 Glückwunsch! Du hast gewonnen!');
-        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
-          alert('😢 Schade! Der Bot hat gewonnen!');
-        }
-        else {
-          alert('😐 Unentschieden!');
-        }
-      }else{
-        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime);
-      }
-      return;
+    if (isPair) {
+      setTimeout(() => { if (this.checkWin()) return; }, this.delay);
     }
+
     // Wenn kein Paar gefunden wurde, wird gewechselt
     if (!isPair) {
       // Zug wechseln
       this.switchTurn();
     } else if (!this.isPlayerTurn) {
-      this.pairsFoundBot++;
+      // this.pairsFoundBot++;
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
     else {
-      this.pairsFoundPlayer++;
+      // this.pairsFoundPlayer++;
     }
-    // console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
+  }
+
+  checkWin() {
+    if (this.pairsFound === this.cardImages.length) {
+      this.timerService.stopTimer();
+      let finTime = this.timerService.getFomateTimer();
+
+      if (this.difficulty !== 'none') {
+        if (this.pairsFoundPlayer > this.pairsFoundBot) { alert('🎉 Glückwunsch! Du hast gewonnen!'); }
+        else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
+        else { alert('😐 Unentschieden!'); }
+      } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
+      return true;
+    }
+    return false;
   }
 
   /** 🔄 Wechselt den Zug zwischen Spieler und Bot */
@@ -253,10 +262,12 @@ export class GameService {
   }
 
   /** 🧠 Bot merkt sich Karten */
+  // mögliche Verbesserung: Bot merkt sich nur die Karten letzten 3 züge (botMemory.size <= 3)
   rememberCard(card: any) {
     if (!card.matched) {
       this.botMemory.set(card.id, this.getCards().indexOf(card));
+      console.log('Bot merkt sich Karte ' + card.id + ' an Position ' + this.getCards().indexOf(card));
+      console.log(this.botMemory);
     }
   }
-
 }
