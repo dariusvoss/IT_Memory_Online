@@ -9,15 +9,11 @@ import { DialogComponent } from '../dialog/dialog.component';
     styleUrl: './size-dialogue.component.css'
 })
 export class SizeDialogueComponent {
+  private selectedCardCount: number = 16; // Standardgröße
   constructor(public activeModal: NgbActiveModal, private modalService: NgbModal) {}
 
   selectSize(cardCount: number) {
-    localStorage.setItem('selectedCardCount', cardCount.toString());  // Kartengröße speichern
-    this.activeModal.close();  // Aktuelles Fenster schließen
-    this.openGameDialog();  // Spiel starten
-  }
-  
-  openGameDialog() {
-    this.modalService.open(DialogComponent, { size: 'lg', centered: true });  // Spielfeld-Dialog öffnen
+    this.selectedCardCount = cardCount;  // Größe setzen
+    this.activeModal.close(this.selectedCardCount);  // Aktuelles Fenster schließen
   }
 }

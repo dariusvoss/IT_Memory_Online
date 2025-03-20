@@ -14,7 +14,7 @@ export class GameService {
   private difficulty: 'easy' | 'medium' | 'hard' | 'none'  = 'none'; // Schwierigkeitsstufe
   private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
-  private visibleDelay = 1500; // Verzögerung für das Umdrehen der Karten
+  private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
 
   public get pairsFoundPlayerGetter(): number {
     return this.pairsFoundPlayer; 
@@ -59,6 +59,7 @@ export class GameService {
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
+  private selectedImages: string[] = [];
   
 
   /** Setzt die Schwierigkeitsstufe */
@@ -70,18 +71,18 @@ export class GameService {
 
   constructor() {
     console.log(this.difficulty);
-    this.initializeGame();
+    // this.initializeGame();
     // this.setDifficulty('easy');
   }
 
   
 
    /** 🔄 Erstellt das Kartendeck und mischt es */
-   initializeGame() {
-    const selectedSize = parseInt(localStorage.getItem('selectedCardCount') || '16', 10);
-    const selectedImages = this.cardImages.slice(0, selectedSize / 2);  // Nur so viele Bilder wie benötigt
+   initializeGame(cardCount: number) {
+    const selectedSize = cardCount;
+    this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
 
-    this.cards = selectedImages.flatMap((image, index) => [
+    this.cards = this.selectedImages.flatMap((image, index) => [
       { id: index, image, flipped: false, matched: false },
       { id: index, image, flipped: false, matched: false },
     ]);
@@ -145,8 +146,8 @@ export class GameService {
 
     this.selectedCards = [];
 
-    // Check, ob alle Paare gefunden wurden
-    if (this.pairsFound === this.cardImages.length) {
+    if (this.pairsFound === this.selectedImages.length) {
+    // if (this.pairsFound === selectedImages.length) {
       if(this.pairsFoundPlayer > this.pairsFoundBot){
         alert('🎉 Glückwunsch! Du hast gewonnen!');
       }else if(this.pairsFoundPlayer < this.pairsFoundBot){
