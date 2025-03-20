@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { DialogComponent } from '../dialog/dialog.component';
+import { GameService } from '../dialog/board/game.service';
 
 @Component({
     selector: 'app-menu',
@@ -9,9 +10,40 @@ import { DialogComponent } from '../dialog/dialog.component';
     styleUrl: './menu.component.css'
 })
 export class MenuComponent {
-  constructor(private modalService: NgbModal) {}
+  protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
+  private isDifficultChanged: boolean = false;
+
+  constructor(private modalService: NgbModal, private gameService : GameService) {  }
+
+selectHard() {
+  this.difficulty = 'Schwer';
+  this.gameService.setDifficulty('hard');
+  console.log('Hard selected');
+}
+
+selectMedium() {
+  this.difficulty = 'Mittel';
+  this.gameService.setDifficulty('medium');
+  console.log('Medium selected');
+}
+
+selectEasy() {
+  this.difficulty = 'Einfach';
+  this.gameService.setDifficulty('easy');
+  console.log('Easy selected');
+}
+
+ 
 
   openDialog() {
+    this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+  }
+
+  openPvBDialog() {
+    console.log('Difficulty Dialog');
+    if (!this.isDifficultChanged) {
+      this.gameService.setDifficulty('easy');
+    }
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
   }
 }

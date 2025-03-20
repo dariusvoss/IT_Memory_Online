@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 
 
 @Injectable({
@@ -11,7 +11,7 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
-  private difficulty: 'easy' | 'medium' | 'hard' = 'easy'; // Schwierigkeitsstufe
+  private difficulty: 'easy' | 'medium' | 'hard' | 'none'  = 'none'; // Schwierigkeitsstufe
 
   private cardImages = [
     'assets/images/Sample_Memory_Card_01.jpg',
@@ -27,9 +27,17 @@ export class GameService {
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
   
 
+  /** Setzt die Schwierigkeitsstufe */
+  setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
+   this.difficulty = level;
+   console.log(this.difficulty);
+ }
+  
+
   constructor() {
+    console.log(this.difficulty);
     this.initializeGame();
-    this.setDifficulty('easy');
+    // this.setDifficulty('easy');
   }
 
   
@@ -82,12 +90,12 @@ export class GameService {
       // Karten passen zusammen -> bleiben aufgedeckt
       this.selectedCards.forEach((card) => (card.matched = true));
       this.pairsFound++;
-      console.log('Paar gefunden!');
+      // console.log('Paar gefunden!');
       isPair = true;
     } else {
       // Karten passen nicht -> umdrehen
       this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false),500));
-      console.log('Kein Paar gefunden!');
+      // console.log('Kein Paar gefunden!');
     }
 
     this.selectedCards = [];
@@ -133,10 +141,7 @@ export class GameService {
   //------------------------------------- Bot-Logik -------------------------------------//
   //-------------------------------------------------------------------------------------//
 
-  /** Setzt die Schwierigkeitsstufe */
-  setDifficulty(level: 'easy' | 'medium' | 'hard') {
-    this.difficulty = level;
-  }
+  
 
   /** 🤖 Bot-Aktion basierend auf Schwierigkeitsgrad */
   botMove() {
@@ -144,10 +149,15 @@ export class GameService {
 
     if (this.difficulty === 'easy') {
       this.randomBotMove(availableCards);
+      console.log('easy');
     } else if (this.difficulty === 'medium') {
       this.mediumBotMove(availableCards);
+      console.log('medium');
     } else if (this.difficulty === 'hard') {
       this.hardBotMove(availableCards);
+      console.log('hard');
+    }else if (this.difficulty === 'none') {
+      this.isPlayerTurn = true;
     }
   }
 
@@ -169,6 +179,7 @@ export class GameService {
 
   private mediumBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
+    console.log(this.botMemory);
 
     // Prüfen, ob der Bot ein Paar kennt
     for (const [id, index] of this.botMemory) {
@@ -185,6 +196,7 @@ export class GameService {
 
   private hardBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
+    console.log('bot hard');
 
     // Prüfen, ob der Bot ein Paar kennt (inkl. Spieler-Karten)
     for (const [id, index] of this.botMemory) {
