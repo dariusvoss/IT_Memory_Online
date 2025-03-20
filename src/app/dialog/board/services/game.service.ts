@@ -1,7 +1,5 @@
-import { Time } from '@angular/common';
 import { Inject, Injectable } from '@angular/core';
 import { TimerService } from './timer.service';
-import { time } from 'console';
 
 
 @Injectable({
@@ -162,14 +160,14 @@ export class GameService {
     else {
       this.pairsFoundPlayer++;
     }
-    console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
+    // console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
   }
 
   /** 🔄 Wechselt den Zug zwischen Spieler und Bot */
   private switchTurn() {
     this.isPlayerTurn = !this.isPlayerTurn;
 
-    if (!this.isPlayerTurn) {
+    if (!this.isPlayerTurn && this.difficulty !== 'none') {
       console.log('Bot ist am Zug!');
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     } else {
@@ -201,7 +199,7 @@ export class GameService {
     } else if (this.difficulty === 'none') {
       this.isPlayerTurn = true;
     }
-    console.log(this.botDelay);
+    // console.log(this.botDelay);
   }
 
   private randomBotMove(availableCards: any[]) {
@@ -239,7 +237,7 @@ export class GameService {
 
   private hardBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-    console.log('bot hard');
+    // console.log('bot hard');
 
     // Prüfen, ob der Bot ein Paar kennt (inkl. Spieler-Karten)
     for (const [id, index] of this.botMemory) {
