@@ -24,7 +24,9 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
+    if(this.gameService.isPlayerTurn) {
     this.gameService.flipCard(card);
+    }
   }
 }
 

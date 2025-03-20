@@ -5,7 +5,7 @@ import { Inject, Injectable } from '@angular/core';
   providedIn: 'root'
 })
 export class GameService {
-  private isPlayerTurn: boolean = true; // Startet mit dem Spieler
+  isPlayerTurn: boolean = true; // Startet mit dem Spieler
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
@@ -30,7 +30,7 @@ export class GameService {
   /** Setzt die Schwierigkeitsstufe */
   setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
    this.difficulty = level;
-   console.log(this.difficulty);
+  //  console.log(this.difficulty);
  }
   
 

@@ -16,18 +16,21 @@ export class MenuComponent {
   constructor(private modalService: NgbModal, private gameService : GameService) {  }
 
 selectHard() {
+  this.isDifficultChanged = true;
   this.difficulty = 'Schwer';
   this.gameService.setDifficulty('hard');
   console.log('Hard selected');
 }
 
 selectMedium() {
+  this.isDifficultChanged = true;
   this.difficulty = 'Mittel';
   this.gameService.setDifficulty('medium');
   console.log('Medium selected');
 }
 
 selectEasy() {
+  this.isDifficultChanged = true;
   this.difficulty = 'Einfach';
   this.gameService.setDifficulty('easy');
   console.log('Easy selected');
@@ -40,7 +43,7 @@ selectEasy() {
   }
 
   openPvBDialog() {
-    console.log('Difficulty Dialog');
+    // console.log('Difficulty Dialog');
     if (!this.isDifficultChanged) {
       this.gameService.setDifficulty('easy');
     }
