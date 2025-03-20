@@ -9,10 +9,6 @@ import { GameService } from '../dialog/board/game.service';
     imports: [],
     templateUrl: './menu.component.html',
     styleUrl: './menu.component.css'
-    selector: 'app-menu',
-    imports: [],
-    templateUrl: './menu.component.html',
-    styleUrl: './menu.component.css'
 })
 export class MenuComponent {
   protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
