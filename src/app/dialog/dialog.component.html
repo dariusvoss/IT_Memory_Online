@@ -1,14 +1,35 @@
 <div class="modal-header">
-    <h4 class="modal-title">Memory-Spiel</h4>
+  <div class="container">
+    <div class="item">
+      <h4 class="modal-title">Memory-Spiel</h4>
+    </div>
+    <div class="item">{{isPlayerTurn ? 'Du bist dran' : 'Der Bot ist dran'}}</div>
+    <!-- <div class="center"><h5>Highscore: highscore</h5></div>
+    <div class="center"><h5>Zeit: time</h5></div> -->
+
+  </div>
+  <div class="right">
     <button type="button" class="close" (click)="closeModal()">
       &times;
     </button>
   </div>
-  
-  <div class="modal-body">
-    <app-board></app-board> <!-- Spielfeld anzeigen -->
+</div>
+
+<div class="modal-body">
+  <app-board></app-board> <!-- Spielfeld anzeigen -->
+</div>
+
+<div class="modal-footer">
+  <div class="container">
+    <div class="item">
+      Spieler : {{playerPoints}}
+    </div>
+    <div class="center">
+      Bot : {{botPoints}}
+    </div>
+
   </div>
-  
-  <div class="modal-footer">
+  <div class="right">
     <button class="btn btn-secondary" (click)="closeModal()">Schließen</button>
-  </div>  
+  </div>
+</div>

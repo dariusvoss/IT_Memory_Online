@@ -24,7 +24,10 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
+    // Ist der Spieler am nicht Zug wird nichts gemacht
+    if(this.gameService.isPlayerTurn) {
     this.gameService.flipCard(card);
+    }
   }
 }
 

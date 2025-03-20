@@ -1,5 +1,18 @@
 <div class="d-grid gap-2">
-    <button type="button" class="btn btn-outline-primary" (click)="openChooseSize()">Spieler vs. Bot</button>
-    <button type="button" class="btn btn-outline-primary" (click)="openChooseSize()">Spieler vs. Zeit</button>
+  <div class="btn-group dropend">
+    <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">
+      Spieler vs. Bot ({{difficulty}})
+    </button>
+    <button type="button"  style="width: 8%; background-color: darkgray; margin: 0%; border: 0px; align-items: center;" data-bs-toggle="dropdown" aria-expanded="false">
+      <div class="arrow-right"></div>
+    </button>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item" (click)="selectEasy()">Einfach</a></li>
+      <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
+      <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
+    </ul>
+  </div>
+    <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
+    <button type="button" class="btn btn-outline-primary" (click)="openDialog()">Spieler vs. Zeit</button>
     <button type="button" class="btn btn-outline-secondary" (click)="openDialog()">Scoreboard</button>
   </div>
