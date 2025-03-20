@@ -12,6 +12,16 @@ export class GameService {
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
   private difficulty: 'easy' | 'medium' | 'hard' | 'none'  = 'none'; // Schwierigkeitsstufe
+  private botDelay = 3000; // Verzögerung für den Bot
+  private delay = 1000; // Verzögerung verzögerung allgemein
+  private visibleDelay = 1500; // Verzögerung für das Umdrehen der Karten
+
+  public get pairsFoundPlayerGetter(): number {
+    return this.pairsFoundPlayer; 
+  }
+  public get pairsFoundBotGetter(): number { 
+    return this.pairsFoundBot; 
+  } 
 
   private cardImages = [
     'assets/images/Sample_Memory_Card_01.jpg',
@@ -75,11 +85,19 @@ export class GameService {
     if (this.selectedCards.length < 2 && !card.flipped && !card.matched) {
       card.flipped = true;
       this.selectedCards.push(card);
-      console.log(this.selectedCards);
+
+      // ist der Bot am Zug und die Schwierigkeit ist medium oder hard, wird die Karte gemerkt
+      if(this.difficulty === 'medium' && !this.isPlayerTurn){
+        this.rememberCard(card);
+      }else if(this.difficulty === 'hard' ){ // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
+        this.rememberCard(card);
+      }
+      // console.log(this.selectedCards);
+      // console.log(this.botMemory);
     }
 
     if (this.selectedCards.length === 2) {
-      setTimeout(() => this.checkMatch(), 1000);
+      setTimeout(() => this.checkMatch(), this.delay);
     }
   }
 
@@ -94,7 +112,7 @@ export class GameService {
       isPair = true;
     } else {
       // Karten passen nicht -> umdrehen
-      this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false),500));
+      this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false, this.visibleDelay)));
       // console.log('Kein Paar gefunden!');
     }
 
@@ -112,13 +130,13 @@ export class GameService {
       }
       return;
     }
-
+    // Wenn kein Paar gefunden wurde, wird gewechselt
     if (!isPair) {
     // Zug wechseln
     this.switchTurn();
     }else if (!this.isPlayerTurn){
       this.pairsFoundBot++;
-      setTimeout(() => this.botMove(), 1000); // Bot spielt nach einer kurzen Verzögerung
+      setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
     else{
       this.pairsFoundPlayer++;
@@ -132,7 +150,7 @@ export class GameService {
 
     if (!this.isPlayerTurn) {
       console.log('Bot ist am Zug!');
-      setTimeout(() => this.botMove(), 1000); // Bot spielt nach einer kurzen Verzögerung
+      setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     } else {
       console.log('Spieler ist am Zug!');
     }
@@ -149,21 +167,24 @@ export class GameService {
 
     if (this.difficulty === 'easy') {
       this.randomBotMove(availableCards);
-      console.log('easy');
+      // console.log('easy');
     } else if (this.difficulty === 'medium') {
       this.mediumBotMove(availableCards);
-      console.log('medium');
+      // this.botDelay = Math.round(this.botDelay * 1.05);  // Verzögerung für den Bot verlängert sich bei jedem Zug
+      // console.log('medium');
     } else if (this.difficulty === 'hard') {
       this.hardBotMove(availableCards);
-      console.log('hard');
+      // this.botDelay = Math.round(this.botDelay * 1.07);  // Verzögerung für den Bot verlängert sich bei jedem Zug
+      // console.log('hard');
     }else if (this.difficulty === 'none') {
       this.isPlayerTurn = true;
     }
+    console.log(this.botDelay);
   }
 
   private randomBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-
+    // console.log(availableCards.length);
     const firstCard = availableCards[Math.floor(Math.random() * availableCards.length)];
     this.flipCard(firstCard);
     // console.log(firstCard);
@@ -173,13 +194,13 @@ export class GameService {
       const secondCard = secondAvailable[Math.floor(Math.random() * secondAvailable.length)];
       this.flipCard(secondCard);
       // console.log(secondCard);
-    }, 500);
-    setTimeout(() => this.checkMatch(), 3000);
+    }, this.delay);
+    // setTimeout(() =>{console.log('hallo'); this.checkMatch();}, 100000);// wird nicht ausgeführt
   }
 
   private mediumBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-    console.log(this.botMemory);
+    
 
     // Prüfen, ob der Bot ein Paar kennt
     for (const [id, index] of this.botMemory) {
@@ -217,6 +238,5 @@ export class GameService {
       this.botMemory.set(card.id, this.getCards().indexOf(card));
     }
   }
-
 
 }
