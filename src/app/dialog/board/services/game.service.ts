@@ -1,4 +1,7 @@
+import { Time } from '@angular/common';
 import { Inject, Injectable } from '@angular/core';
+import { TimerService } from './timer.service';
+import { time } from 'console';
 
 
 @Injectable({
@@ -11,17 +14,36 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
-  private difficulty: 'easy' | 'medium' | 'hard' | 'none'  = 'none'; // Schwierigkeitsstufe
+  private difficulty: 'easy' | 'medium' | 'hard' | 'none' = 'none'; // Schwierigkeitsstufe
   private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
   private visibleDelay = 1500; // Verzögerung für das Umdrehen der Karten
 
+  //-------------------------------------------------------------------------------------//
+  //----------------------------------- Getter/Setter -----------------------------------//
+  //-------------------------------------------------------------------------------------//
+
   public get pairsFoundPlayerGetter(): number {
-    return this.pairsFoundPlayer; 
+    return this.pairsFoundPlayer;
   }
-  public get pairsFoundBotGetter(): number { 
-    return this.pairsFoundBot; 
-  } 
+
+  public get pairsFoundBotGetter(): number {
+    return this.pairsFoundBot;
+  }
+
+  public get difficultyGetter(): string {
+    return this.difficulty;
+  }
+
+  public setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
+    this.difficulty = level;
+    //  console.log(this.difficulty);
+  }
+
+  //--------------------------------------------------------------------------------------//
+  //------------------------------------- Game-Logik -------------------------------------//
+  //--------------------------------------------------------------------------------------//
+
 
   private cardImages = [
     'assets/images/Sample_Memory_Card_01.jpg',
@@ -35,25 +57,17 @@ export class GameService {
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
-  
 
-  /** Setzt die Schwierigkeitsstufe */
-  setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
-   this.difficulty = level;
-  //  console.log(this.difficulty);
- }
-  
-
-  constructor() {
-    console.log(this.difficulty);
+  constructor(private timerService: TimerService) {
+    console.log('GameService');
     this.initializeGame();
     // this.setDifficulty('easy');
   }
 
-  
 
-   /** 🔄 Erstellt das Kartendeck und mischt es */
-   initializeGame() {
+
+  /** 🔄 Erstellt das Kartendeck und mischt es */
+  initializeGame() {
     this.cards = this.cardImages.flatMap((image, index) => [
       { id: index, image, flipped: false, matched: false },
       { id: index, image, flipped: false, matched: false },
@@ -87,9 +101,9 @@ export class GameService {
       this.selectedCards.push(card);
 
       // ist der Bot am Zug und die Schwierigkeit ist medium oder hard, wird die Karte gemerkt
-      if(this.difficulty === 'medium' && !this.isPlayerTurn){
+      if (this.difficulty === 'medium' && !this.isPlayerTurn) {
         this.rememberCard(card);
-      }else if(this.difficulty === 'hard' ){ // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
+      } else if (this.difficulty === 'hard') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
         this.rememberCard(card);
       }
       // console.log(this.selectedCards);
@@ -120,25 +134,32 @@ export class GameService {
 
     // Check, ob alle Paare gefunden wurden
     if (this.pairsFound === this.cardImages.length) {
-      if(this.pairsFoundPlayer > this.pairsFoundBot){
-        alert('🎉 Glückwunsch! Du hast gewonnen!');
-      }else if(this.pairsFoundPlayer < this.pairsFoundBot){
-        alert('😢 Schade! Der Bot hat gewonnen!');
-      }
-      else{
-        alert('😐 Unentschieden!');
+      this.timerService.stopTimer();
+      let finTime = this.timerService.getFomateTimer();
+
+      if (this.difficulty !== 'none') {
+        if (this.pairsFoundPlayer > this.pairsFoundBot) {
+          alert('🎉 Glückwunsch! Du hast gewonnen!');
+        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+          alert('😢 Schade! Der Bot hat gewonnen!');
+        }
+        else {
+          alert('😐 Unentschieden!');
+        }
+      }else{
+        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime);
       }
       return;
     }
     // Wenn kein Paar gefunden wurde, wird gewechselt
     if (!isPair) {
-    // Zug wechseln
-    this.switchTurn();
-    }else if (!this.isPlayerTurn){
+      // Zug wechseln
+      this.switchTurn();
+    } else if (!this.isPlayerTurn) {
       this.pairsFoundBot++;
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
-    else{
+    else {
       this.pairsFoundPlayer++;
     }
     console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
@@ -155,11 +176,12 @@ export class GameService {
       console.log('Spieler ist am Zug!');
     }
   }
+
   //-------------------------------------------------------------------------------------//
   //------------------------------------- Bot-Logik -------------------------------------//
   //-------------------------------------------------------------------------------------//
 
-  
+
 
   /** 🤖 Bot-Aktion basierend auf Schwierigkeitsgrad */
   botMove() {
@@ -176,7 +198,7 @@ export class GameService {
       this.hardBotMove(availableCards);
       // this.botDelay = Math.round(this.botDelay * 1.07);  // Verzögerung für den Bot verlängert sich bei jedem Zug
       // console.log('hard');
-    }else if (this.difficulty === 'none') {
+    } else if (this.difficulty === 'none') {
       this.isPlayerTurn = true;
     }
     console.log(this.botDelay);
@@ -200,7 +222,7 @@ export class GameService {
 
   private mediumBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-    
+
 
     // Prüfen, ob der Bot ein Paar kennt
     for (const [id, index] of this.botMemory) {

@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { DialogComponent } from '../dialog/dialog.component';
-import { GameService } from '../dialog/board/game.service';
+import { GameService } from '../dialog/board/services/game.service';
 
 @Component({
     selector: 'app-menu',
@@ -40,6 +40,7 @@ selectEasy() {
 
   openDialog() {
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    this.gameService.setDifficulty('none');
   }
 
   openPvBDialog() {
