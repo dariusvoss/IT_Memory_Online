@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { DialogComponent } from '../dialog/dialog.component';
+import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 import { GameService } from '../dialog/board/game.service';
 
 @Component({
@@ -12,6 +13,7 @@ import { GameService } from '../dialog/board/game.service';
 export class MenuComponent {
   protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
   private isDifficultChanged: boolean = false;
+  private selectedCardCount: number = 16; // Standardgröße
 
   constructor(private modalService: NgbModal, private gameService : GameService) {  }
 
@@ -42,11 +44,36 @@ selectEasy() {
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
   }
 
+  chooseSize(mode: string) {
+    const modalRef = this.modalService.open(SizeDialogueComponent);
+
+    modalRef.result.then((result) => {
+      if (result) {
+        this.selectedCardCount = result;
+        this.openGameDialog(mode);
+      }
+    }).catch((error) => {
+      console.log('Dialog dismissed');
+    });
+  }
+
+  openGameDialog(mode: string) {
+    if (mode === 'PvB') {
+      this.openPvBDialog();
+    } else if (mode === 'PvT') {
+      this.openPvTDialog();
+    }
+  }
+
   openPvBDialog() {
-    // console.log('Difficulty Dialog');
     if (!this.isDifficultChanged) {
       this.gameService.setDifficulty('easy');
     }
+    this.gameService.initializeGame(this.selectedCardCount);  // Spielfeld initialisieren
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+  }
+
+  openPvTDialog() {
+    // Logik zum Öffnen des PvT-Dialogs
   }
 }
