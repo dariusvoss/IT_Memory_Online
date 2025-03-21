@@ -103,12 +103,27 @@ export class GameService {
     this.cards = this.shuffleCards(this.cards);
     this.selectedCards = [];
     this.pairsFound = 0;
-    this.isPlayerTurn = true; // Spieler beginnt
     this.gameStarted = true;
 
     if (this.difficulty !== 'none') {
       
     }
+  }
+
+  /**Setzt den GameService in seinen Initialzustand zurück, sodass der Spieler ein neues Spiel starten kann*/
+  resetGame() {
+    this.cards.forEach(card => {
+      card.flipped = false;
+      card.matched = false;
+    });
+    this.selectedCards = [];
+    this.pairsFound = 0;
+    this.pairsFoundPlayer = 0;
+    this.pairsFoundBot = 0;
+    this.botMemory.clear();
+    this.gameStarted = false;
+    this.isPlayerTurn = true;
+    this.timerService.resetTimer();
   }
 
   /** 🎴 Mischt die Karten mit dem Fisher-Yates-Algorithmus */
@@ -201,7 +216,7 @@ export class GameService {
         else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
         else { alert('😐 Unentschieden!'); }
       } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
-      this.timerService.resetTimer();
+      this.resetGame();
       return true;
     }
     return false;

@@ -45,6 +45,14 @@ export class MenuComponent {
     this.gameService.setDifficulty('none');
   }
 
+  resumeDialog() {
+    this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+  }
+
+  restartDialog() {
+    this.gameService.resetGame();
+  }
+
   chooseSize(mode: string) {
     const modalRef = this.modalService.open(SizeDialogueComponent);
 
@@ -76,6 +84,7 @@ export class MenuComponent {
   }
 
   openPvTDialog() {
+    this.gameService.setDifficulty('none');
     this.gameService.initializeGame(this.selectedSize);
     const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben

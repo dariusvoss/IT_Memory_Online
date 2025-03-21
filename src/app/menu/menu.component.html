@@ -1,5 +1,5 @@
 <div class="d-grid gap-2" style="width: 50%">
-  <div class="d-grid gap-2 mx-auto" style="width: 100%" *ngIf="!gameService.gameStarted"> <!-- Wenn das Spiel noch nicht gestartet wurde -->
+  <div class="d-grid gap-2" style="width: 100%" *ngIf="!gameService.gameStarted"> <!-- Wenn das Spiel noch nicht gestartet wurde -->
     <div class="btn-group dropend">
       <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvB')">
         Spieler vs. Bot ({{difficulty}})
@@ -17,6 +17,10 @@
     </div>
     <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
     <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvT')">Spieler vs. Zeit</button>
+  </div>
+  <div class="d-grid gap-2" style="width: 100%" *ngIf="gameService.gameStarted">
+    <button type="button" class="btn btn-outline-secondary" (click)="resumeDialog()">Spiel fortsetzen</button>
+    <button type="button" class="btn btn-outline-secondary" (click)="restartDialog()">Neues Spiel starten</button>
   </div>
   <button type="button" class="btn btn-outline-secondary" (click)="openDialog()">Scoreboard</button>
 </div>
