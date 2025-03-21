@@ -1,11 +1,21 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
+import { GameService } from '../dialog/board/services/game.service';
+import { CommonModule } from '@angular/common';
+import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-scoreboard',
-  imports: [],
+  imports: [CommonModule],
   templateUrl: './scoreboard.component.html',
-  styleUrl: './scoreboard.component.css'
+  styleUrls: ['./scoreboard.component.css']
 })
-export class ScoreboardComponent {
+export class ScoreboardComponent implements OnInit {
+  gameService = inject(GameService);
+  gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: number; rank: string; time: string }[] = [];
 
+  constructor(public activeModal: NgbActiveModal) {}
+
+  ngOnInit() {
+    this.gameRecords = this.gameService.getGameRecords();
+  }
 }

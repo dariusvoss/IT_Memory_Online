@@ -4,6 +4,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 import { GameService } from '../dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
+import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-menu',
@@ -88,5 +89,9 @@ export class MenuComponent {
     this.gameService.initializeGame(this.selectedSize);
     const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
+  }
+
+  openScoreboard() {
+    this.modalService.open(ScoreboardComponent, { size: 'lg', centered: true });
   }
 }

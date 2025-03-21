@@ -36,6 +36,10 @@ export class GameService {
   public setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
     this.difficulty = level;
     //  console.log(this.difficulty);
+  } 
+
+  public getGameRecords() {
+    return this.gameRecords;
   }
 
   //--------------------------------------------------------------------------------------//
