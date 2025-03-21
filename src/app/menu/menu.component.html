@@ -1,19 +1,22 @@
-
-<div class="d-grid gap-2">
-  <div class="btn-group dropend">
-    <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvB')">
-      Spieler vs. Bot ({{difficulty}})
-    </button>
-    <button class="bnt btn-outline-primary" type="button"  style="width: 8%; background-color: darkgray; margin: 0px; border: 0px; align-items: center;" data-bs-toggle="dropdown" aria-expanded="false">
-      <div class="arrow-right" ></div>
-    </button>
-    <ul class="dropdown-menu">
-      <li><a class="dropdown-item" (click)="selectEasy()">Einfach</a></li>
-      <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
-      <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
-    </ul>
-  </div>
+<div class="d-grid gap-2" style="width: 50%">
+  <div class="d-grid gap-2 mx-auto" style="width: 100%" *ngIf="!gameService.gameStarted"> <!-- Wenn das Spiel noch nicht gestartet wurde -->
+    <div class="btn-group dropend">
+      <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvB')">
+        Spieler vs. Bot ({{difficulty}})
+      </button>
+      <button class="bnt btn-outline-primary" type="button"
+        style="width: 8%; background-color: darkgray; margin: 0px; border: 0px; align-items: center;"
+        data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="arrow-right"></div>
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" (click)="selectEasy()">Einfach</a></li>
+        <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
+        <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
+      </ul>
+    </div>
     <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
     <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvT')">Spieler vs. Zeit</button>
-    <button type="button" class="btn btn-outline-secondary" (click)="openDialog()">Scoreboard</button>
   </div>
+  <button type="button" class="btn btn-outline-secondary" (click)="openDialog()">Scoreboard</button>
+</div>

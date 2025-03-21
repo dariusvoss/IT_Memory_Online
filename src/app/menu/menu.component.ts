@@ -1,20 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 import { GameService } from '../dialog/board/services/game.service';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-menu',
+  imports: [CommonModule],
   templateUrl: './menu.component.html',
   styleUrl: './menu.component.css'
 })
 export class MenuComponent {
+  gameService = inject(GameService);
   protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
   private isDifficultChanged: boolean = false;
   private selectedSize: number = 16; // Standardgröße
 
-  constructor(private modalService: NgbModal, private gameService: GameService) {}
+  constructor(private modalService: NgbModal) {}
 
   selectHard() {
     this.isDifficultChanged = true;

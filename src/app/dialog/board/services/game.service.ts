@@ -7,6 +7,7 @@ import { TimerService } from './timer.service';
 })
 export class GameService {
   isPlayerTurn: boolean = true; // Startet mit dem Spieler
+  gameStarted: boolean = false; // Gibt an, ob ein Spieldurchlauf bereits gestartet wurde
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
@@ -103,6 +104,7 @@ export class GameService {
     this.selectedCards = [];
     this.pairsFound = 0;
     this.isPlayerTurn = true; // Spieler beginnt
+    this.gameStarted = true;
 
     if (this.difficulty !== 'none') {
       
@@ -199,6 +201,7 @@ export class GameService {
         else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
         else { alert('😐 Unentschieden!'); }
       } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
+      this.timerService.resetTimer();
       return true;
     }
     return false;
