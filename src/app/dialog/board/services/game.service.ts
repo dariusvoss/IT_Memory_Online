@@ -44,29 +44,57 @@ export class GameService {
 
 
   private cardImages = [
-    'assets/images/Sample_Memory_Card_01.jpg',
-    'assets/images/Sample_Memory_Card_02.jpg',
-    'assets/images/Sample_Memory_Card_03.jpg',
-    'assets/images/Sample_Memory_Card_04.jpg',
-    'assets/images/Sample_Memory_Card_05.jpg',
-    'assets/images/Sample_Memory_Card_06.jpg',
-    'assets/images/Sample_Memory_Card_07.jpg',
-    'assets/images/Sample_Memory_Card_08.jpg'
+    'assets/images/Memory_Card_01.jpg',
+    'assets/images/Memory_Card_02.jpg',
+    'assets/images/Memory_Card_03.jpg',
+    'assets/images/Memory_Card_04.jpg',
+    'assets/images/Memory_Card_05.jpg',
+    'assets/images/Memory_Card_06.jpg',
+    'assets/images/Memory_Card_07.jpg',
+    'assets/images/Memory_Card_08.jpg',
+    'assets/images/Memory_Card_09.jpg',
+    'assets/images/Memory_Card_10.jpg',
+    'assets/images/Memory_Card_11.jpg',
+    'assets/images/Memory_Card_12.jpg',
+    'assets/images/Memory_Card_13.jpg',
+    'assets/images/Memory_Card_14.jpg',
+    'assets/images/Memory_Card_15.jpg',
+    'assets/images/Memory_Card_16.jpg',
+    'assets/images/Memory_Card_17.jpg',
+    'assets/images/Memory_Card_18.jpg',
+    'assets/images/Memory_Card_19.jpg',
+    'assets/images/Memory_Card_20.jpg',
+    'assets/images/Memory_Card_21.jpg',
+    'assets/images/Memory_Card_22.jpg',
+    'assets/images/Memory_Card_23.jpg',
+    'assets/images/Memory_Card_24.jpg',
+    'assets/images/Memory_Card_25.jpg',
+    'assets/images/Memory_Card_26.jpg',
+    'assets/images/Memory_Card_27.jpg',
+    'assets/images/Memory_Card_28.jpg',
+    'assets/images/Memory_Card_29.jpg',
+    'assets/images/Memory_Card_30.jpg',
+    'assets/images/Memory_Card_31.jpg',
+    'assets/images/Memory_Card_32.jpg'
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
+  private selectedImages: string[] = [];
 
   constructor(private timerService: TimerService) {
     console.log('GameService');
-    this.initializeGame();
+    // this.initializeGame();
     // this.setDifficulty('easy');
   }
 
 
 
-  /** 🔄 Erstellt das Kartendeck und mischt es */
-  initializeGame() {
-    this.cards = this.cardImages.flatMap((image, index) => [
+   /** 🔄 Erstellt das Kartendeck und mischt es */
+   initializeGame(cardCount: number) {
+    const selectedSize = cardCount;
+    this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
+
+    this.cards = this.selectedImages.flatMap((image, index) => [
       { id: index, image, flipped: false, matched: false },
       { id: index, image, flipped: false, matched: false },
     ]);
