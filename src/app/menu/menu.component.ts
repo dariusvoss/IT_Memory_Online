@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
-import { GameService } from '../dialog/board/game.service';
 import { GameService } from '../dialog/board/services/game.service';
 
 @Component({
