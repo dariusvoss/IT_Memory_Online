@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
 import { TimerService } from './timer.service';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -80,18 +79,15 @@ export class GameService {
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
+  private gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: number; rank: string; time: string }[] = [];
   private selectedImages: string[] = [];
 
   constructor(private timerService: TimerService) {
     console.log('GameService');
-    // this.initializeGame();
-    // this.setDifficulty('easy');
   }
 
-
-
-   /** 🔄 Erstellt das Kartendeck und mischt es */
-   initializeGame(cardCount: number) {
+  /** 🔄 Erstellt das Kartendeck und mischt es */
+  initializeGame(cardCount: number) {
     const selectedSize = cardCount;
     this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
 
@@ -106,7 +102,7 @@ export class GameService {
     this.gameStarted = true;
 
     if (this.difficulty !== 'none') {
-      
+    // Bot-Logik initialisieren, falls erforderlich
     }
   }
 
@@ -171,20 +167,14 @@ export class GameService {
       this.pairsFound++;
       if (this.difficulty === 'none' || this.isPlayerTurn) {
         this.pairsFoundPlayer++;
-        // console.log('Paar gefunden! Spieler');
-      }
-      else {  // Bot
+      } else {  // Bot
         this.pairsFoundBot++; // Bot hat ein Paar gefunden 
-        // console.log('Paar gefunden! Bot');
       }
       isPair = true;
     } else {
       // Karten passen nicht -> umdrehen
       this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false, this.visibleDelay)));
-      // console.log('Kein Paar gefunden!');
     }
-
-    // console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
 
     this.selectedCards = [];
 
@@ -198,11 +188,7 @@ export class GameService {
       // Zug wechseln
       this.switchTurn();
     } else if (!this.isPlayerTurn) {
-      // this.pairsFoundBot++;
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
-    }
-    else {
-      // this.pairsFoundPlayer++;
     }
   }
 
@@ -210,12 +196,38 @@ export class GameService {
     if (this.pairsFound === this.selectedImages.length) {
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleString();
 
       if (this.difficulty !== 'none') {
-        if (this.pairsFoundPlayer > this.pairsFoundBot) { alert('🎉 Glückwunsch! Du hast gewonnen!'); }
-        else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
-        else { alert('😐 Unentschieden!'); }
-      } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
+        if (this.pairsFoundPlayer > this.pairsFoundBot) {
+          alert('🎉 Glückwunsch! Du hast gewonnen!');
+        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+          alert('😢 Schade! Der Bot hat gewonnen!');
+        } else {
+          alert('😐 Unentschieden!');
+        }
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Bot',
+          difficultyLevel: this.difficulty,
+          deckSize: `${this.cards.length}`,
+          points: this.pairsFoundPlayer,
+          rank: '',
+          time: ''
+        });
+      } else {
+        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime);
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Zeit',
+          difficultyLevel: '',
+          deckSize: `${this.cards.length}`,
+          points: 0,
+          rank: '1', // Beispiel-Rang, kann angepasst werden
+          time: finTime
+        });
+      }
       this.resetGame();
       return true;
     }
@@ -237,8 +249,6 @@ export class GameService {
   //-------------------------------------------------------------------------------------//
   //------------------------------------- Bot-Logik -------------------------------------//
   //-------------------------------------------------------------------------------------//
-
-
 
   /** 🤖 Bot-Aktion basierend auf Schwierigkeitsgrad */
   botMove() {
@@ -279,7 +289,6 @@ export class GameService {
 
   private mediumBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-
 
     // Prüfen, ob der Bot ein Paar kennt
     for (const [id, index] of this.botMemory) {
