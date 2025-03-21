@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { GameService } from './game.service';
+import { GameService } from './services/game.service';
 import { CardComponent } from './card/card.component';
 import { CommonModule } from '@angular/common';
 
@@ -27,8 +27,8 @@ export class BoardComponent implements OnInit {
 
   onCardClick(card: any) {
     // Ist der Spieler am nicht Zug wird nichts gemacht
-    if (this.gameService.isPlayerTurn) {
-      this.gameService.flipCard(card);
+    if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'none') {
+    this.gameService.flipCard(card);
     }
   }
 
