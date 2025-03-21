@@ -39,7 +39,7 @@ export class TimerService {
     return this.timer$.asObservable();
   }
 
-  getFomateTimer() {
+  getFormattedTimer() {
     const time = this.timer$.getValue();
     const minutes = Math.floor(time / 60);
     const seconds = time % 60;

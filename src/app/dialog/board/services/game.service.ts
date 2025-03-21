@@ -15,7 +15,7 @@ export class GameService {
   private difficulty: 'easy' | 'medium' | 'hard' | 'none' = 'none'; // Schwierigkeitsstufe
   private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
-  private visibleDelay = 1500; // Verzögerung für das Umdrehen der Karten
+  private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
 
   //-------------------------------------------------------------------------------------//
   //----------------------------------- Getter/Setter -----------------------------------//
@@ -103,6 +103,10 @@ export class GameService {
     this.selectedCards = [];
     this.pairsFound = 0;
     this.isPlayerTurn = true; // Spieler beginnt
+
+    if (this.difficulty !== 'none') {
+      
+    }
   }
 
   /** 🎴 Mischt die Karten mit dem Fisher-Yates-Algorithmus */
@@ -186,9 +190,9 @@ export class GameService {
   }
 
   checkWin() {
-    if (this.pairsFound === this.cardImages.length) {
+    if (this.pairsFound === this.selectedImages.length) {
       this.timerService.stopTimer();
-      let finTime = this.timerService.getFomateTimer();
+      let finTime = this.timerService.getFormattedTimer();
 
       if (this.difficulty !== 'none') {
         if (this.pairsFoundPlayer > this.pairsFoundBot) { alert('🎉 Glückwunsch! Du hast gewonnen!'); }
