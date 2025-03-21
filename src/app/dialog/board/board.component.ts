@@ -8,7 +8,7 @@ import { CommonModule } from '@angular/common';
   imports: [CardComponent, CommonModule],
   template: `
     <div class="board" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
-      <app-card *ngFor="let card of cards" [image]="card.image" [cardId]="card.id" [flipped]="card.flipped" (cardClicked)="onCardClick(card)"></app-card>
+      <app-card style="display: flex; justify-content: center; align-items: center; " *ngFor="let card of cards" [image]="card.image" [cardId]="card.id" [flipped]="card.flipped" (cardClicked)="onCardClick(card)"></app-card>
     </div>
   `,
   styleUrls: ['./board.component.css']
@@ -26,7 +26,7 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
-    // Ist der Spieler am nicht Zug wird nichts gemacht
+    // Ist der Spieler nicht am Zug wird nichts gemacht
     if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'none') {
     this.gameService.flipCard(card);
     }

@@ -79,14 +79,14 @@ export class MenuComponent {
       this.gameService.setDifficulty('easy');
     }
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    const modalRef = this.modalService.open(DialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvB'; // Spielmodus übergeben
   }
 
   openPvTDialog() {
     this.gameService.setDifficulty('none');
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    const modalRef = this.modalService.open(DialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
   }
 }
