@@ -1,3 +1,7 @@
-.col{
+.col {
     margin: 10px;
+}
+
+.content {
+    text-align: center;
 }

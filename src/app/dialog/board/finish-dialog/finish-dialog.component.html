@@ -1,41 +1,20 @@
 <div class="modal-header">
-    <h4 class="modal-title ">Spiel beendet</h4>
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeDialog()"></button>
+  <h4 class="modal-title ">Spiel beendet</h4>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeDialog()"></button>
 </div>
 <div class="modal-body">
-    <p>{{message}}</p>
-    <p *ngIf="difficulty === 'none'">Deine Zeit: <strong>{{ time }}</strong></p>
+  <p class="content">{{message}}</p>
+  <div class="content">
+    <p *ngIf="difficulty === 'None'">Deine Zeit: <strong>{{ time }}</strong></p>
     <div *ngIf="playerPoints !== undefined && botPoints !== undefined">
-        Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>
-        <div *ngIf="difficulty !== 'none'">Bot-Punkte: <strong>{{ botPoints }}</strong></div>
+      <div *ngIf="difficulty !== 'None'">Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>Bot-Punkte: <strong>{{
+          botPoints }}</strong></div>
     </div>
+  </div>
 </div>
-<div class="modal-footer container justify-content-center" >
-    <div class="row justify-content-center">
-        <button class="btn btn-primary col " (click)="closeDialog()">Scoreboard</button>
-        <button class="btn btn-primary col" (click)="closeDialog()">OK</button>
-    </div>
+<div class="modal-footer container justify-content-center">
+  <div class="row justify-content-center">
+    <button class="btn btn-primary col " (click)="closeDialog()">Scoreboard</button>
+    <button class="btn btn-primary col" (click)="closeDialog()">OK</button>
+  </div>
 </div>
-
-<!-- 
-<div class="modal" tabindex="-1">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title">Spiel beendet</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeDialog()"></button>
-        </div>
-        <div class="modal-body">
-            <p>🎉 Glückwunsch! Du hast alle Paare gefunden!</p>
-            <p *ngIf="difficulty === 'none'">Deine Zeit: <strong>{{ time }}</strong></p>
-            <div *ngIf="playerPoints !== undefined && botPoints !== undefined">
-                Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>
-                <div *ngIf="difficulty !== 'none'">Bot-Punkte: <strong>{{ botPoints }}</strong></div>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"(click)="closeDialog()">OK</button>
-        </div>
-      </div>
-    </div>
-  </div> -->
