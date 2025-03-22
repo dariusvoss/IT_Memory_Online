@@ -11,7 +11,7 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 })
 export class ScoreboardComponent implements OnInit {
   gameService = inject(GameService);
-  gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: number; rank: string; time: string }[] = [];
+  gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }[] = [];
 
   constructor(public activeModal: NgbActiveModal) {}
 

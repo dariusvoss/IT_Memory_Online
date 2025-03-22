@@ -13,6 +13,7 @@ export class GameService {
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
   private difficulty: 'easy' | 'medium' | 'hard' | 'none' = 'none'; // Schwierigkeitsstufe
+  private deckSize: string = '';
   private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
   private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
@@ -33,10 +34,33 @@ export class GameService {
     return this.difficulty;
   }
 
+  public getFormattedDifficulty(): string {
+    if (this.difficulty === 'easy') {
+      return 'Einfach';
+    } else if (this.difficulty === 'medium') {
+      return 'Mittel';
+    } else if (this.difficulty === 'hard') {
+      return 'Schwer';
+    } else {
+      return 'Keine';
+    }
+  }
+
   public setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
     this.difficulty = level;
     //  console.log(this.difficulty);
   } 
+
+  private getSelectedSize(selectedSize: number): string {
+    if (selectedSize === 16) {
+      this.deckSize = 'Klein (16 Karten)';
+    } else if (selectedSize === 36) {
+      this.deckSize = 'Mittel (36 Karten)';
+    } else if (selectedSize === 64) {
+      this.deckSize = 'Groß (64 Karten)';
+    }
+    return this.deckSize;
+  }
 
   public getGameRecords() {
     return this.gameRecords;
@@ -83,7 +107,7 @@ export class GameService {
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
-  private gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: number; rank: string; time: string }[] = [];
+  private gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }[] = [];
   private selectedImages: string[] = [];
 
   constructor(private timerService: TimerService) {
@@ -214,9 +238,9 @@ export class GameService {
         this.gameRecords.push({
           date: formattedDate,
           mode: 'Spieler vs. Bot',
-          difficultyLevel: this.difficulty,
-          deckSize: `${this.cards.length}`,
-          points: this.pairsFoundPlayer,
+          difficultyLevel: this.getFormattedDifficulty(),
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: `${this.pairsFoundPlayer}`,
           rank: '-',
           time: '-'
         });
@@ -226,8 +250,8 @@ export class GameService {
           date: formattedDate,
           mode: 'Spieler vs. Zeit',
           difficultyLevel: '-',
-          deckSize: `${this.cards.length}`,
-          points: 0,
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: '-',
           rank: '1', // Beispiel-Rang, kann angepasst werden
           time: finTime
         });
