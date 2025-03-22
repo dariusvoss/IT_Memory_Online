@@ -18,4 +18,8 @@ export class ScoreboardComponent implements OnInit {
   ngOnInit() {
     this.gameRecords = this.gameService.getGameRecords();
   }
+
+  closeModal() {
+    this.activeModal.close();
+  }
 }

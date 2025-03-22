@@ -217,15 +217,15 @@ export class GameService {
           difficultyLevel: this.difficulty,
           deckSize: `${this.cards.length}`,
           points: this.pairsFoundPlayer,
-          rank: '',
-          time: ''
+          rank: '-',
+          time: '-'
         });
       } else {
         alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime);
         this.gameRecords.push({
           date: formattedDate,
           mode: 'Spieler vs. Zeit',
-          difficultyLevel: '',
+          difficultyLevel: '-',
           deckSize: `${this.cards.length}`,
           points: 0,
           rank: '1', // Beispiel-Rang, kann angepasst werden

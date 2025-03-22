@@ -1,0 +1,29 @@
+.scoreboard {
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.modal-header {
+    text-align: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px; /* Abstand zwischen Header und Body */
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px; /* Abstand zwischen Linien und Textinhalt */
+  text-align: center;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.right {
+    text-align: right;
+}
