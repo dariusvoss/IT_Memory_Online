@@ -2,12 +2,12 @@
   <div class="d-grid gap-2" style="width: 100%" *ngIf="!gameService.gameStarted"> <!-- Wenn das Spiel noch nicht gestartet wurde -->
     <div class="btn-group dropend">
       <button type="button" class="btn btn-outline-primary" style="width: 90%;" (click)="chooseSize('PvB')">
-        Spieler vs. Bot ({{difficulty}})
+        Spieler vs. Bot ({{gameService.difficultyGetter}})
       </button>
         <button type="button" class="btn-secondary-custom-width btn btn-secondary dropdown-toggle dropdown-toggle-split "  data-bs-toggle="dropdown" aria-expanded="false">
         </button>
       <ul class="dropdown-menu">
-        <li><a class="dropdown-item" (click)="selectEasy()">Einfach</a></li>
+        <li><a class="dropdown-item" (click)="selectEasy()">Leicht</a></li>
         <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
         <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
       </ul>
@@ -19,5 +19,5 @@
     <button type="button" class="btn btn-outline-secondary" (click)="resumeDialog()">Spiel fortsetzen</button>
     <button type="button" class="btn btn-outline-secondary" (click)="restartDialog()">Neues Spiel starten</button>
   </div>
-  <button type="button" class="btn btn-outline-secondary" (click)="openDialog()">Scoreboard</button>
+  <button type="button" class="btn btn-outline-secondary" (click)="openScoreboard()">Scoreboard</button>
 </div>

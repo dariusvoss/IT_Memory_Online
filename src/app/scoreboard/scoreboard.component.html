@@ -1,0 +1,32 @@
+<div class="scoreboard">
+  <h2 style="text-align: center">Scoreboard</h2>
+  <hr>
+  <table>
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Modus</th>
+        <th>Schwierigkeitsgrad</th>
+        <th>Kartensatzgröße</th>
+        <th>Punkte</th>
+        <th>Rang</th>
+        <th>Zeit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let record of gameRecords">
+        <td>{{ record.date }}</td>
+        <td>{{ record.mode }}</td>
+        <td>{{ record.difficultyLevel }}</td>
+        <td>{{ record.deckSize }}</td>
+        <td>{{ record.points }}</td>
+        <td>{{ record.rank }}</td>
+        <td>{{ record.time }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <hr>
+  <div class="right">
+    <button class="btn btn-secondary" (click)="closeModal()">Schließen</button>
+  </div>
+</div>
