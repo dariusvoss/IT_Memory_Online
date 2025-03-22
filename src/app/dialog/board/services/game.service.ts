@@ -12,10 +12,10 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
-  public difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
+  private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
   private deckSize: string = '';
   // private botDelay = 3000; // Verzögerung für den Bot
-  private delay = 1000; // Verzögerung verzögerung allgemein
+  private delay = 800; // Verzögerung verzögerung allgemein
   private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
 
   //-------------------------------------------------------------------------------------//
@@ -201,11 +201,39 @@ export class GameService {
 
     // Wenn kein Paar gefunden wurde, wird gewechselt
     if (!isPair) {
-      // Zug wechseln
-      this.switchTurn();
+      // Zug wechseln (nur, wenn Spieler im Modus "Spieler vs. Bot" spielt)
+      if (this.difficulty !== 'None') {
+        this.switchTurn();
+      }
     } else if (!this.isPlayerTurn) {
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
+  }
+
+  private calculateRank(time: string, deckSize: number): string {
+    const [minutes, seconds] = time.split(':').map(Number);
+    const totalSeconds = minutes * 60 + seconds;
+
+    if (deckSize === 16) {
+      if (totalSeconds < 60) return 'A';
+      if (totalSeconds < 120) return 'B';
+      if (totalSeconds < 180) return 'C';
+      if (totalSeconds < 240) return 'D';
+      return 'E';
+    } else if (deckSize === 36) {
+      if (totalSeconds < 120) return 'A';
+      if (totalSeconds < 240) return 'B';
+      if (totalSeconds < 360) return 'C';
+      if (totalSeconds < 480) return 'D';
+      return 'E';
+    } else if (deckSize === 64) {
+      if (totalSeconds < 180) return 'A';
+      if (totalSeconds < 360) return 'B';
+      if (totalSeconds < 540) return 'C';
+      if (totalSeconds < 720) return 'D';
+      return 'E';
+    }
+    return 'E';
   }
 
   checkWin() {
@@ -233,14 +261,15 @@ export class GameService {
           time: '-'
         });
       } else {
-        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime);
+        const rank = this.calculateRank(finTime, this.cards.length);
+        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime + ' Dein Rang ist: ' + rank);
         this.gameRecords.push({
           date: formattedDate,
           mode: 'Spieler vs. Zeit',
           difficultyLevel: '-',
           deckSize: this.getSelectedSize(this.cards.length),
           points: '-',
-          rank: '1', // Beispiel-Rang, kann angepasst werden
+          rank: rank,
           time: finTime
         });
       }
