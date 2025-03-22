@@ -1,0 +1,12 @@
+body {
+    font-family: Tahoma, sans-serif;
+}
+
+/* Spezielle Schriftart für Header */
+h1, h2, h3, h4, h5, h6 {
+    font-family: Trebuchet MS, sans-serif;
+}
+
+.btn {
+    font-family: Trebuchet MS, sans-serif;
+}
