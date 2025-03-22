@@ -12,9 +12,9 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
-  private difficulty: 'easy' | 'medium' | 'hard' | 'none' = 'none'; // Schwierigkeitsstufe
+  public difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
   private deckSize: string = '';
-  private botDelay = 3000; // Verzögerung für den Bot
+  // private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
   private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
 
@@ -34,19 +34,7 @@ export class GameService {
     return this.difficulty;
   }
 
-  public getFormattedDifficulty(): string {
-    if (this.difficulty === 'easy') {
-      return 'Einfach';
-    } else if (this.difficulty === 'medium') {
-      return 'Mittel';
-    } else if (this.difficulty === 'hard') {
-      return 'Schwer';
-    } else {
-      return 'Keine';
-    }
-  }
-
-  public setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
+  public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
     this.difficulty = level;
     //  console.log(this.difficulty);
   } 
@@ -129,7 +117,7 @@ export class GameService {
     this.pairsFound = 0;
     this.gameStarted = true;
 
-    if (this.difficulty !== 'none') {
+    if (this.difficulty !== 'None') {
     // Bot-Logik initialisieren, falls erforderlich
     }
   }
@@ -172,9 +160,9 @@ export class GameService {
       this.selectedCards.push(card);
 
       // ist der Bot am Zug und die Schwierigkeit ist medium oder hard, wird die Karte gemerkt
-      if (this.difficulty === 'medium' && !this.isPlayerTurn) {
+      if (this.difficulty === 'Mittel' && !this.isPlayerTurn) {
         this.rememberCard(card);
-      } else if (this.difficulty === 'hard') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
+      } else if (this.difficulty === 'Schwer') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
         this.rememberCard(card);
       }
       // console.log(this.selectedCards);
@@ -193,7 +181,7 @@ export class GameService {
       // Karten passen zusammen -> bleiben aufgedeckt
       this.selectedCards.forEach((card) => (card.matched = true));
       this.pairsFound++;
-      if (this.difficulty === 'none' || this.isPlayerTurn) {
+      if (this.difficulty === 'None' || this.isPlayerTurn) {
         this.pairsFoundPlayer++;
       } else {  // Bot
         this.pairsFoundBot++; // Bot hat ein Paar gefunden 
@@ -227,7 +215,7 @@ export class GameService {
       const currentDate = new Date();
       const formattedDate = currentDate.toLocaleString();
 
-      if (this.difficulty !== 'none') {
+      if (this.difficulty !== 'None') {
         if (this.pairsFoundPlayer > this.pairsFoundBot) {
           alert('🎉 Glückwunsch! Du hast gewonnen!');
         } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
@@ -238,7 +226,7 @@ export class GameService {
         this.gameRecords.push({
           date: formattedDate,
           mode: 'Spieler vs. Bot',
-          difficultyLevel: this.getFormattedDifficulty(),
+          difficultyLevel: this.difficulty,
           deckSize: this.getSelectedSize(this.cards.length),
           points: `${this.pairsFoundPlayer}`,
           rank: '-',
@@ -266,7 +254,7 @@ export class GameService {
   private switchTurn() {
     this.isPlayerTurn = !this.isPlayerTurn;
 
-    if (!this.isPlayerTurn && this.difficulty !== 'none') {
+    if (!this.isPlayerTurn && this.difficulty !== 'None') {
       console.log('Bot ist am Zug!');
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     } else {
@@ -282,18 +270,18 @@ export class GameService {
   botMove() {
     const availableCards = this.getCards().filter(card => !card.flipped && !card.matched);
 
-    if (this.difficulty === 'easy') {
+    if (this.difficulty === 'Leicht') {
       this.randomBotMove(availableCards);
       // console.log('easy');
-    } else if (this.difficulty === 'medium') {
+    } else if (this.difficulty === 'Mittel') {
       this.mediumBotMove(availableCards);
       // this.botDelay = Math.round(this.botDelay * 1.05);  // Verzögerung für den Bot verlängert sich bei jedem Zug
       // console.log('medium');
-    } else if (this.difficulty === 'hard') {
+    } else if (this.difficulty === 'Schwer') {
       this.hardBotMove(availableCards);
       // this.botDelay = Math.round(this.botDelay * 1.07);  // Verzögerung für den Bot verlängert sich bei jedem Zug
       // console.log('hard');
-    } else if (this.difficulty === 'none') {
+    } else if (this.difficulty === 'None') {
       this.isPlayerTurn = true;
     }
     // console.log(this.botDelay);
