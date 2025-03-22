@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { DialogComponent } from '../dialog/dialog.component';
 
 @Component({
     selector: 'app-size-dialogue',
@@ -10,7 +9,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 })
 export class SizeDialogueComponent {
   private selectedCardCount: number = 16; // Standardgröße
-  constructor(public activeModal: NgbActiveModal, private modalService: NgbModal) {}
+  constructor(public activeModal: NgbActiveModal) {}
 
   selectSize(cardCount: number) {
     this.selectedCardCount = cardCount;  // Größe setzen

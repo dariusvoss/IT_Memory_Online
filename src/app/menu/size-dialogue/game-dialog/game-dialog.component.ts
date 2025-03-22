@@ -9,10 +9,10 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-dialog',
   imports: [BoardComponent, CommonModule],
-  templateUrl: './dialog.component.html',
-  styleUrls: ['./dialog.component.css']
+  templateUrl: './game-dialog.component.html',
+  styleUrls: ['./game-dialog.component.css']
 })
-export class DialogComponent implements OnInit, OnDestroy {
+export class GameDialogComponent implements OnInit, OnDestroy {
   @Input() mode: string = ''; // Spielmodus als Eingabeparameter
   gameService = inject(GameService);
   private timer: TimerService = inject(TimerService);

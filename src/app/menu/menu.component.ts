@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { DialogComponent } from '../dialog/dialog.component';
-import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
-import { GameService } from '../dialog/board/services/game.service';
+import { GameDialogComponent } from './size-dialogue/game-dialog/game-dialog.component';
+import { SizeDialogueComponent } from './size-dialogue/size-dialogue.component';
+import { GameService } from './size-dialogue/game-dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
-import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
-import { TimerService } from '../dialog/board/services/timer.service';
+import { ScoreboardComponent } from './scoreboard/scoreboard.component';
+import { TimerService } from './size-dialogue/game-dialog/board/services/timer.service';
 
 @Component({
   selector: 'app-menu',
@@ -43,7 +43,7 @@ export class MenuComponent {
     if (this.gameService.difficultyGetter === 'None') {
       this.timer.startTimer();
     }
-    this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    this.modalService.open(GameDialogComponent, { size: 'lg', centered: true });
   }
 
   restartDialog() {
@@ -76,14 +76,14 @@ export class MenuComponent {
       this.gameService.setDifficulty('Leicht');
     }
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'xl', centered: true });
+    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvB'; // Spielmodus übergeben
   }
 
   openPvTDialog() {
     this.gameService.setDifficulty('None');
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'xl', centered: true });
+    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
   }
 
