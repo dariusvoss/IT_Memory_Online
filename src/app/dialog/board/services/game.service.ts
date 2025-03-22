@@ -254,7 +254,7 @@ export class GameService {
       modalRef.componentInstance.botPoints = this.pairsFoundBot;
       modalRef.componentInstance.difficulty = this.difficulty;
 
-      if (this.difficulty !== 'none') {
+      if (this.difficulty !== 'None') {
         if (this.pairsFoundPlayer > this.pairsFoundBot) {
           modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast gewonnen!';
         } else if (this.pairsFoundPlayer < this.pairsFoundBot) {

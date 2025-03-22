@@ -40,7 +40,7 @@ export class MenuComponent {
   }
 
   resumeDialog() {
-    if (this.gameService.difficultyGetter === 'none') {
+    if (this.gameService.difficultyGetter === 'None') {
       this.timer.startTimer();
     }
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
