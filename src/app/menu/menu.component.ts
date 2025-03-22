@@ -4,6 +4,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 import { GameService } from '../dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
+import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-menu',
@@ -13,7 +14,6 @@ import { CommonModule } from '@angular/common';
 })
 export class MenuComponent {
   gameService = inject(GameService);
-  protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
   private isDifficultChanged: boolean = false;
   private selectedSize: number = 16; // Standardgröße
 
@@ -21,28 +21,20 @@ export class MenuComponent {
 
   selectHard() {
     this.isDifficultChanged = true;
-    this.difficulty = 'Schwer';
-    this.gameService.setDifficulty('hard');
+    this.gameService.setDifficulty('Schwer');
     console.log('Hard selected');
   }
 
   selectMedium() {
     this.isDifficultChanged = true;
-    this.difficulty = 'Mittel';
-    this.gameService.setDifficulty('medium');
+    this.gameService.setDifficulty('Mittel');
     console.log('Medium selected');
   }
 
   selectEasy() {
     this.isDifficultChanged = true;
-    this.difficulty = 'Einfach';
-    this.gameService.setDifficulty('easy');
+    this.gameService.setDifficulty('Leicht');
     console.log('Easy selected');
-  }
-
-  openDialog() {
-    this.modalService.open(DialogComponent, { size: 'lg', centered: true });
-    this.gameService.setDifficulty('none');
   }
 
   resumeDialog() {
@@ -76,7 +68,7 @@ export class MenuComponent {
 
   openPvBDialog() {
     if (!this.isDifficultChanged) {
-      this.gameService.setDifficulty('easy');
+      this.gameService.setDifficulty('Leicht');
     }
     this.gameService.initializeGame(this.selectedSize);
     const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
@@ -84,9 +76,13 @@ export class MenuComponent {
   }
 
   openPvTDialog() {
-    this.gameService.setDifficulty('none');
+    this.gameService.setDifficulty('None');
     this.gameService.initializeGame(this.selectedSize);
     const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
+  }
+
+  openScoreboard() {
+    this.modalService.open(ScoreboardComponent, { size: 'lg', centered: true });
   }
 }

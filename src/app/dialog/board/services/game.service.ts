@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@angular/core';
 import { TimerService } from './timer.service';
 
-
 @Injectable({
   providedIn: 'root'
 })
@@ -13,9 +12,10 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
-  private difficulty: 'easy' | 'medium' | 'hard' | 'none' = 'none'; // Schwierigkeitsstufe
-  private botDelay = 3000; // Verzögerung für den Bot
-  private delay = 1000; // Verzögerung verzögerung allgemein
+  private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
+  private deckSize: string = '';
+  // private botDelay = 3000; // Verzögerung für den Bot
+  private delay = 800; // Verzögerung verzögerung allgemein
   private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
 
   //-------------------------------------------------------------------------------------//
@@ -34,9 +34,24 @@ export class GameService {
     return this.difficulty;
   }
 
-  public setDifficulty(level: 'easy' | 'medium' | 'hard' | 'none') {
+  public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
     this.difficulty = level;
     //  console.log(this.difficulty);
+  } 
+
+  private getSelectedSize(selectedSize: number): string {
+    if (selectedSize === 16) {
+      this.deckSize = 'Klein (16 Karten)';
+    } else if (selectedSize === 36) {
+      this.deckSize = 'Mittel (36 Karten)';
+    } else if (selectedSize === 64) {
+      this.deckSize = 'Groß (64 Karten)';
+    }
+    return this.deckSize;
+  }
+
+  public getGameRecords() {
+    return this.gameRecords;
   }
 
   //--------------------------------------------------------------------------------------//
@@ -80,18 +95,15 @@ export class GameService {
   ];
 
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
+  private gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }[] = [];
   private selectedImages: string[] = [];
 
   constructor(private timerService: TimerService) {
     console.log('GameService');
-    // this.initializeGame();
-    // this.setDifficulty('easy');
   }
 
-
-
-   /** 🔄 Erstellt das Kartendeck und mischt es */
-   initializeGame(cardCount: number) {
+  /** 🔄 Erstellt das Kartendeck und mischt es */
+  initializeGame(cardCount: number) {
     const selectedSize = cardCount;
     this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
 
@@ -105,8 +117,8 @@ export class GameService {
     this.pairsFound = 0;
     this.gameStarted = true;
 
-    if (this.difficulty !== 'none') {
-      
+    if (this.difficulty !== 'None') {
+    // Bot-Logik initialisieren, falls erforderlich
     }
   }
 
@@ -148,9 +160,9 @@ export class GameService {
       this.selectedCards.push(card);
 
       // ist der Bot am Zug und die Schwierigkeit ist medium oder hard, wird die Karte gemerkt
-      if (this.difficulty === 'medium' && !this.isPlayerTurn) {
+      if (this.difficulty === 'Mittel' && !this.isPlayerTurn) {
         this.rememberCard(card);
-      } else if (this.difficulty === 'hard') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
+      } else if (this.difficulty === 'Schwer') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
         this.rememberCard(card);
       }
       // console.log(this.selectedCards);
@@ -169,22 +181,16 @@ export class GameService {
       // Karten passen zusammen -> bleiben aufgedeckt
       this.selectedCards.forEach((card) => (card.matched = true));
       this.pairsFound++;
-      if (this.difficulty === 'none' || this.isPlayerTurn) {
+      if (this.difficulty === 'None' || this.isPlayerTurn) {
         this.pairsFoundPlayer++;
-        // console.log('Paar gefunden! Spieler');
-      }
-      else {  // Bot
+      } else {  // Bot
         this.pairsFoundBot++; // Bot hat ein Paar gefunden 
-        // console.log('Paar gefunden! Bot');
       }
       isPair = true;
     } else {
       // Karten passen nicht -> umdrehen
       this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false, this.visibleDelay)));
-      // console.log('Kein Paar gefunden!');
     }
-
-    // console.log('Player: ' + this.pairsFoundPlayer + ' Bot: ' + this.pairsFoundBot);
 
     this.selectedCards = [];
 
@@ -195,27 +201,78 @@ export class GameService {
 
     // Wenn kein Paar gefunden wurde, wird gewechselt
     if (!isPair) {
-      // Zug wechseln
-      this.switchTurn();
+      // Zug wechseln (nur, wenn Spieler im Modus "Spieler vs. Bot" spielt)
+      if (this.difficulty !== 'None') {
+        this.switchTurn();
+      }
     } else if (!this.isPlayerTurn) {
-      // this.pairsFoundBot++;
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
-    else {
-      // this.pairsFoundPlayer++;
+  }
+
+  private calculateRank(time: string, deckSize: number): string {
+    const [minutes, seconds] = time.split(':').map(Number);
+    const totalSeconds = minutes * 60 + seconds;
+
+    if (deckSize === 16) {
+      if (totalSeconds < 60) return 'A';
+      if (totalSeconds < 120) return 'B';
+      if (totalSeconds < 180) return 'C';
+      if (totalSeconds < 240) return 'D';
+      return 'E';
+    } else if (deckSize === 36) {
+      if (totalSeconds < 120) return 'A';
+      if (totalSeconds < 240) return 'B';
+      if (totalSeconds < 360) return 'C';
+      if (totalSeconds < 480) return 'D';
+      return 'E';
+    } else if (deckSize === 64) {
+      if (totalSeconds < 180) return 'A';
+      if (totalSeconds < 360) return 'B';
+      if (totalSeconds < 540) return 'C';
+      if (totalSeconds < 720) return 'D';
+      return 'E';
     }
+    return 'E';
   }
 
   checkWin() {
     if (this.pairsFound === this.selectedImages.length) {
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleString();
 
-      if (this.difficulty !== 'none') {
-        if (this.pairsFoundPlayer > this.pairsFoundBot) { alert('🎉 Glückwunsch! Du hast gewonnen!'); }
-        else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
-        else { alert('😐 Unentschieden!'); }
-      } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
+      if (this.difficulty !== 'None') {
+        if (this.pairsFoundPlayer > this.pairsFoundBot) {
+          alert('🎉 Glückwunsch! Du hast gewonnen!');
+        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+          alert('😢 Schade! Der Bot hat gewonnen!');
+        } else {
+          alert('😐 Unentschieden!');
+        }
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Bot',
+          difficultyLevel: this.difficulty,
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: `${this.pairsFoundPlayer}`,
+          rank: '-',
+          time: '-'
+        });
+      } else {
+        const rank = this.calculateRank(finTime, this.cards.length);
+        alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime + ' Dein Rang ist: ' + rank);
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Zeit',
+          difficultyLevel: '-',
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: '-',
+          rank: rank,
+          time: finTime
+        });
+      }
       this.resetGame();
       return true;
     }
@@ -226,7 +283,7 @@ export class GameService {
   private switchTurn() {
     this.isPlayerTurn = !this.isPlayerTurn;
 
-    if (!this.isPlayerTurn && this.difficulty !== 'none') {
+    if (!this.isPlayerTurn && this.difficulty !== 'None') {
       console.log('Bot ist am Zug!');
       setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     } else {
@@ -238,24 +295,22 @@ export class GameService {
   //------------------------------------- Bot-Logik -------------------------------------//
   //-------------------------------------------------------------------------------------//
 
-
-
   /** 🤖 Bot-Aktion basierend auf Schwierigkeitsgrad */
   botMove() {
     const availableCards = this.getCards().filter(card => !card.flipped && !card.matched);
 
-    if (this.difficulty === 'easy') {
+    if (this.difficulty === 'Leicht') {
       this.randomBotMove(availableCards);
       // console.log('easy');
-    } else if (this.difficulty === 'medium') {
+    } else if (this.difficulty === 'Mittel') {
       this.mediumBotMove(availableCards);
       // this.botDelay = Math.round(this.botDelay * 1.05);  // Verzögerung für den Bot verlängert sich bei jedem Zug
       // console.log('medium');
-    } else if (this.difficulty === 'hard') {
+    } else if (this.difficulty === 'Schwer') {
       this.hardBotMove(availableCards);
       // this.botDelay = Math.round(this.botDelay * 1.07);  // Verzögerung für den Bot verlängert sich bei jedem Zug
       // console.log('hard');
-    } else if (this.difficulty === 'none') {
+    } else if (this.difficulty === 'None') {
       this.isPlayerTurn = true;
     }
     // console.log(this.botDelay);
@@ -279,7 +334,6 @@ export class GameService {
 
   private mediumBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-
 
     // Prüfen, ob der Bot ein Paar kennt
     for (const [id, index] of this.botMemory) {

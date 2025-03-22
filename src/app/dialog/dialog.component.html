@@ -1,14 +1,14 @@
 <div class="modal-header " >
   <div class="container ">
     <!-- <div class="item"> -->
-      <h4 class="modal-title" style="height: auto;">Memory-Spiel</h4>
+      <h4 class="modal-title" style="height: auto; text-align: center">Memory-Spiel</h4>
     <!-- </div> --> 
     <div class="item">
       <b>Am Zug ist:</b><br>
-      {{this.gameService.difficultyGetter ==='none' ? 'Player' : (isPlayerTurn ? 'Player' : 'Bot')}}
+      {{this.gameService.difficultyGetter === 'None' ? 'Spieler' : (isPlayerTurn ? 'Spieler' : 'Bot')}}
     </div>
     <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
-    <div *ngIf=" gameService.difficultyGetter === 'none'  "><h5>Zeit: {{time}}</h5></div> 
+    <div *ngIf=" gameService.difficultyGetter === 'None'  "><h5>Zeit: {{time}}</h5></div> 
 
   </div>
   <div class="right">
@@ -28,7 +28,7 @@
     <div class="item">
       Spieler : {{playerPoints}}
     </div>
-    <div *ngIf="this.gameService.difficultyGetter !== 'none' " class="center">
+    <div *ngIf="this.gameService.difficultyGetter !== 'None' " class="center">
       Bot : {{botPoints}}
     </div>
 
