@@ -1,7 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { GameService } from './services/game.service';
 import { CardComponent } from './card/card.component';
-import { CommonModule } from '@angular/common';
+import { CommonModule, Time } from '@angular/common';
+import { TimerService } from './services/timer.service';
 
 @Component({
   selector: 'app-board',
@@ -17,6 +18,7 @@ export class BoardComponent implements OnInit {
   cards: any[] = [];
   gridTemplateColumns: string = '';
   gridTemplateRows: string = '';
+  timerService: TimerService =  inject(TimerService);
 
   constructor(private gameService: GameService) {}
 
@@ -26,6 +28,9 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
+    if(this.gameService.difficultyGetter === 'none' && !this.timerService.isTimerRunning) {
+      this.timerService.startTimer();
+    } 
     // Ist der Spieler nicht am Zug wird nichts gemacht
     if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'none') {
     this.gameService.flipCard(card);

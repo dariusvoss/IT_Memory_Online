@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@angular/core';
 import { TimerService } from './timer.service';
+import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
 
 @Injectable({
@@ -17,6 +19,7 @@ export class GameService {
   private botDelay = 3000; // Verzögerung für den Bot
   private delay = 1000; // Verzögerung verzögerung allgemein
   private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
+
 
   //-------------------------------------------------------------------------------------//
   //----------------------------------- Getter/Setter -----------------------------------//
@@ -82,7 +85,7 @@ export class GameService {
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
   private selectedImages: string[] = [];
 
-  constructor(private timerService: TimerService) {
+  constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService');
     // this.initializeGame();
     // this.setDifficulty('easy');
@@ -90,8 +93,8 @@ export class GameService {
 
 
 
-   /** 🔄 Erstellt das Kartendeck und mischt es */
-   initializeGame(cardCount: number) {
+  /** 🔄 Erstellt das Kartendeck und mischt es */
+  initializeGame(cardCount: number) {
     const selectedSize = cardCount;
     this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
 
@@ -106,7 +109,7 @@ export class GameService {
     this.gameStarted = true;
 
     if (this.difficulty !== 'none') {
-      
+
     }
   }
 
@@ -190,7 +193,7 @@ export class GameService {
 
     // Check, ob alle Paare gefunden wurden
     if (isPair) {
-      setTimeout(() => { if (this.checkWin()) return; }, this.delay);
+      setTimeout(() => { if (this.checkWin()) return; }, this.delay / 2);
     }
 
     // Wenn kein Paar gefunden wurde, wird gewechselt
@@ -207,15 +210,30 @@ export class GameService {
   }
 
   checkWin() {
-    if (this.pairsFound === this.selectedImages.length) {
+    // if (this.pairsFound === this.selectedImages.length) {
+    if (true) {
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
+      console.log('Spiel beendet!' + this.difficulty);
+      // Öffne den Finish-Dialog und speichere die Referenz
+      const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
+      modalRef.componentInstance.time = finTime;
+      modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
+      modalRef.componentInstance.botPoints = this.pairsFoundBot;
+      modalRef.componentInstance.difficulty = this.difficulty;
 
       if (this.difficulty !== 'none') {
-        if (this.pairsFoundPlayer > this.pairsFoundBot) { alert('🎉 Glückwunsch! Du hast gewonnen!'); }
-        else if (this.pairsFoundPlayer < this.pairsFoundBot) { alert('😢 Schade! Der Bot hat gewonnen!'); }
-        else { alert('😐 Unentschieden!'); }
-      } else { alert('🎉 Glückwunsch! Du hast alle Paare Gefunden! Deine Zeit ist: ' + finTime); }
+        if (this.pairsFoundPlayer > this.pairsFoundBot) {
+          modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast gewonnen!';
+        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+          modalRef.componentInstance.message = '😢 Schade! Der Bot hat gewonnen!';
+        } else {
+          modalRef.componentInstance.message = '😐 Unentschieden!';
+        }
+      } else {
+        modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
+      }
+
       this.resetGame();
       return true;
     }

@@ -1,16 +1,18 @@
-<div class="modal-header " >
+<div class="modal-header ">
   <div class="container ">
     <!-- <div class="item"> -->
-      <h4 class="modal-title" style="height: auto;">Memory-Spiel</h4>
-    <!-- </div> --> 
+    <h4 class="modal-title" style="height: auto;">Memory-Spiel</h4>
+    <!-- </div> -->
     <div class="item">
       <b>Am Zug ist:</b><br>
       {{this.gameService.difficultyGetter ==='none' ? 'Player' : (isPlayerTurn ? 'Player' : 'Bot')}}
     </div>
     <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
-    <div *ngIf=" gameService.difficultyGetter === 'none'  "><h5>Zeit: {{time}}</h5></div> 
-
+    <div *ngIf=" gameService.difficultyGetter === 'none'  ">
+      <h5>Zeit: {{time}}</h5>
+    </div>
   </div>
+
   <div class="right">
     <button type="button" class="close" (click)="closeModal()">
       &times;

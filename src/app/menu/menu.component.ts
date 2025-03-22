@@ -4,6 +4,7 @@ import { DialogComponent } from '../dialog/dialog.component';
 import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
 import { GameService } from '../dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
+import { TimerService } from '../dialog/board/services/timer.service';
 
 @Component({
   selector: 'app-menu',
@@ -13,6 +14,7 @@ import { CommonModule } from '@angular/common';
 })
 export class MenuComponent {
   gameService = inject(GameService);
+  timer = inject(TimerService);   
   protected difficulty: 'Einfach' | 'Mittel' | 'Schwer' = 'Einfach';
   private isDifficultChanged: boolean = false;
   private selectedSize: number = 16; // Standardgröße
@@ -46,6 +48,9 @@ export class MenuComponent {
   }
 
   resumeDialog() {
+    if (this.gameService.difficultyGetter === 'none') {
+      this.timer.startTimer();
+    }
     this.modalService.open(DialogComponent, { size: 'lg', centered: true });
   }
 
