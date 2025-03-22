@@ -4,12 +4,12 @@
       <button type="button" class="btn btn-outline-primary" style="width: 90%;" (click)="chooseSize('PvB')">
         Spieler vs. Bot ({{gameService.difficultyGetter}})
       </button>
-        <button type="button" class="btn-secondary-custom-width btn btn-secondary dropdown-toggle dropdown-toggle-split "  data-bs-toggle="dropdown" aria-expanded="false">
+        <button type="button" class="btn-primary-custom-width btn btn-outline-primary dropdown-toggle dropdown-toggle-split "  data-bs-toggle="dropdown" aria-expanded="false">
         </button>
       <ul class="dropdown-menu">
-        <li><a class="dropdown-item" (click)="selectEasy()">Leicht</a></li>
-        <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
-        <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
+        <li><a class="dropdown-item dropdown-option" (click)="selectEasy()">Leicht</a></li>
+        <li><a class="dropdown-item dropdown-option" (click)="selectMedium()">Mittel</a></li>
+        <li><a class="dropdown-item dropdown-option" (click)="selectHard()">Schwer</a></li>
       </ul>
     </div>
     <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
