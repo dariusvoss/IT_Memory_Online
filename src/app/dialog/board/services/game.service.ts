@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@angular/core';
+import { Injectable, EventEmitter } from '@angular/core';
 import { TimerService } from './timer.service';
 import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
@@ -10,6 +10,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 export class GameService {
   isPlayerTurn: boolean = true; // Startet mit dem Spieler
   gameStarted: boolean = false; // Gibt an, ob ein Spieldurchlauf bereits gestartet wurde
+  gameEnded: EventEmitter<void> = new EventEmitter<void>(); // Event-Emitter für das Spielende
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
@@ -285,8 +286,8 @@ export class GameService {
           time: finTime
         });
       }
-
       this.resetGame();
+      this.gameEnded.emit(); //Signalisierung des Spielendes
       return true;
     }
     return false;
