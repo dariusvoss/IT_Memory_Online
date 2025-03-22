@@ -1,14 +1,11 @@
-<div class="d-grid gap-2" style="width: 50%">
+<div class="d-grid gap-2" style="width: 65%">
   <div class="d-grid gap-2" style="width: 100%" *ngIf="!gameService.gameStarted"> <!-- Wenn das Spiel noch nicht gestartet wurde -->
     <div class="btn-group dropend">
-      <button type="button" class="btn btn-outline-primary" (click)="chooseSize('PvB')">
+      <button type="button" class="btn btn-outline-primary" style="width: 90%;" (click)="chooseSize('PvB')">
         Spieler vs. Bot ({{difficulty}})
       </button>
-      <button class="bnt btn-outline-primary" type="button"
-        style="width: 8%; background-color: darkgray; margin: 0px; border: 0px; align-items: center;"
-        data-bs-toggle="dropdown" aria-expanded="false">
-        <div class="arrow-right"></div>
-      </button>
+        <button type="button" class="btn-secondary-custom-width btn btn-secondary dropdown-toggle dropdown-toggle-split "  data-bs-toggle="dropdown" aria-expanded="false">
+        </button>
       <ul class="dropdown-menu">
         <li><a class="dropdown-item" (click)="selectEasy()">Einfach</a></li>
         <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>

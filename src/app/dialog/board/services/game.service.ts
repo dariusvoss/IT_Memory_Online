@@ -210,8 +210,7 @@ export class GameService {
   }
 
   checkWin() {
-    // if (this.pairsFound === this.selectedImages.length) {
-    if (true) {
+    if (this.pairsFound === this.selectedImages.length) {
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
       console.log('Spiel beendet!' + this.difficulty);
