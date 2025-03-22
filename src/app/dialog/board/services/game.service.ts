@@ -140,6 +140,7 @@ export class GameService {
     this.gameStarted = false;
     this.isPlayerTurn = true;
     this.timerService.resetTimer();
+    this.difficulty = 'Leicht';
   }
 
   /** 🎴 Mischt die Karten mit dem Fisher-Yates-Algorithmus */
