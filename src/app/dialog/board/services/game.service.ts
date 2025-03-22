@@ -262,8 +262,27 @@ export class GameService {
         } else {
           modalRef.componentInstance.message = '😐 Unentschieden!';
         }
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Bot',
+          difficultyLevel: this.difficulty,
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: `${this.pairsFoundPlayer}`,
+          rank: '-',
+          time: '-'
+        });
       } else {
         modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
+        const rank = this.calculateRank(finTime, this.cards.length);
+        this.gameRecords.push({
+          date: formattedDate,
+          mode: 'Spieler vs. Zeit',
+          difficultyLevel: '-',
+          deckSize: this.getSelectedSize(this.cards.length),
+          points: '-',
+          rank: rank,
+          time: finTime
+        });
       }
 
       this.resetGame();
