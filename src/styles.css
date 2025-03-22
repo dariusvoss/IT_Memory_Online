@@ -8,6 +8,41 @@ h1, h2, h3, h4, h5, h6 {
     font-family: Trebuchet MS, sans-serif;
 }
 
-.btn {
-    font-family: Trebuchet MS, sans-serif;
+h4 {
+    text-align: center;
+}
+
+/* Header-Stil für Windows XP */
+.xp-header {
+    background-color: #d4d0c8;
+    border-bottom: 1px solid #808080;
+    padding: 10px;
+    text-align: center;
+}
+  
+/* Body-Stil für Windows XP */
+.xp-body {
+    background-color: #e4e4e4;
+    padding: 20px;
+}
+
+/* Button-Stil für Windows XP */
+.xp-btn {
+    background: linear-gradient(to bottom, #e4e4e4, #d4d0c8);
+    border: 1px solid #808080;
+    border-radius: 3px;
+    color: #000;
+    padding: 5px 10px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.xp-btn:hover {
+    background: linear-gradient(to bottom, #d4d0c8, #e4e4e4);
+}
+
+.xp-btn:active {
+    background: linear-gradient(to bottom, #d4d0c8, #c0c0c0);
+    border: 1px solid #404040;
 }
