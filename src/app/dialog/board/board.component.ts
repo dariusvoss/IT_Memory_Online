@@ -28,11 +28,11 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
-    if(this.gameService.difficultyGetter === 'none' && !this.timerService.isTimerRunning) {
+    if(this.gameService.difficultyGetter === 'None' && !this.timerService.isTimerRunning) {
       this.timerService.startTimer();
     } 
     // Ist der Spieler nicht am Zug wird nichts gemacht
-    if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'none') {
+    if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
     this.gameService.flipCard(card);
     }
   }
