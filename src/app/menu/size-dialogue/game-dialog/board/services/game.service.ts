@@ -42,7 +42,7 @@ export class GameService {
   public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
     this.difficulty = level;
     //  console.log(this.difficulty);
-  } 
+  }
 
   private getSelectedSize(selectedSize: number): string {
     if (selectedSize === 16) {
@@ -58,6 +58,38 @@ export class GameService {
   public getGameRecords() {
     return this.gameRecords;
   }
+
+  //--------------------------------------------------------------------------------------//
+  //------------------------------------ Score-cookie ------------------------------------// 
+  //--------------------------------------------------------------------------------------//
+
+  /* encodeURIComponent: Kodiert den JSON-String, um sicherzustellen, dass er in Cookies gespeichert werden kann.
+  // path=/: Der Cookie ist für die gesamte Website verfügbar.
+  // max-age=31536000: Der Cookie ist 1 Jahr gültig (31536000 Sekunden). */
+  private saveScoreboardToCookies() {
+    const jsonString = JSON.stringify(this.gameRecords); // Scoreboard in JSON umwandeln
+    document.cookie = `scoreboard=${encodeURIComponent(jsonString)}; path=/; max-age=31536000`; // 1 Jahr gültig
+  }
+
+  private loadScoreboardFromCookies(): any[] {  
+    const cookies = document.cookie.split('; ');
+    const scoreboardCookie = cookies.find(row => row.startsWith('scoreboard='));
+    if (scoreboardCookie) {
+      const jsonString = decodeURIComponent(scoreboardCookie.split('=')[1]);
+      return JSON.parse(jsonString); // JSON in ein Array umwandeln
+    }
+    return []; // Leeres Array zurückgeben, wenn kein Scoreboard gefunden wurde
+  }
+
+
+  private addGameRecord(record: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }) {
+    this.gameRecords.push(record);
+    this.saveScoreboardToCookies(); // Speichere das Scoreboard nach jedem neuen Eintrag
+  }
+
+  
+
+
 
   //--------------------------------------------------------------------------------------//
   //------------------------------------- Game-Logik -------------------------------------//
@@ -105,6 +137,8 @@ export class GameService {
 
   constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService');
+    this.gameRecords = this.loadScoreboardFromCookies();
+    console.log(this.gameRecords);
   }
 
   /** 🔄 Erstellt das Kartendeck und mischt es */
@@ -123,7 +157,7 @@ export class GameService {
     this.gameStarted = true;
 
     if (this.difficulty !== 'None') {
-    // Bot-Logik initialisieren, falls erforderlich
+      // Bot-Logik initialisieren, falls erforderlich
     }
   }
 
@@ -248,6 +282,17 @@ export class GameService {
       let finTime = this.timerService.getFormattedTimer();
       const currentDate = new Date();
       const formattedDate = currentDate.toLocaleString();
+
+      const record = {
+        date: formattedDate,
+        mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
+        difficultyLevel: this.difficulty,
+        deckSize: this.getSelectedSize(this.cards.length),
+        points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
+        rank: this.difficulty === 'None' ? this.calculateRank(finTime, this.cards.length) : '-',
+        time: this.difficulty === 'None' ? finTime : '-'
+      };
+
       console.log('Spiel beendet!' + this.difficulty);
       // Öffne den Finish-Dialog und speichere die Referenz
       const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
@@ -264,28 +309,13 @@ export class GameService {
         } else {
           modalRef.componentInstance.message = '😐 Unentschieden!';
         }
-        this.gameRecords.push({
-          date: formattedDate,
-          mode: 'Spieler vs. Bot',
-          difficultyLevel: this.difficulty,
-          deckSize: this.getSelectedSize(this.cards.length),
-          points: `${this.pairsFoundPlayer}`,
-          rank: '-',
-          time: '-'
-        });
       } else {
         modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
         const rank = this.calculateRank(finTime, this.cards.length);
-        this.gameRecords.push({
-          date: formattedDate,
-          mode: 'Spieler vs. Zeit',
-          difficultyLevel: '-',
-          deckSize: this.getSelectedSize(this.cards.length),
-          points: '-',
-          rank: rank,
-          time: finTime
-        });
+        
       }
+      this.addGameRecord(record);
+      console.log(this.gameRecords);
       this.resetGame();
       this.gameEnded.emit(); //Signalisierung des Spielendes
       return true;
