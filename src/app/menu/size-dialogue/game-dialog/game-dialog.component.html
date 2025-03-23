@@ -1,38 +1,37 @@
-<div class="modal-header ">
-  <div class="container ">
-    <!-- <div class="item"> -->
-    <h4 class="modal-title" style="height: auto;">Memory-Spiel</h4>
-    <!-- </div> -->
-    <div class="item">
-      <b>Am Zug ist:</b><br>
-      {{this.gameService.difficultyGetter === 'None' ? 'Spieler' : (isPlayerTurn ? 'Spieler' : 'Bot')}}
+<div class="xp-program-dialog">
+  <div class="modal-header xp-program-header">
+    <div class="container ">
+      <h4>Memory-Spiel</h4>
+      <div class="item">
+        <b>Am Zug ist:</b>
+        {{this.gameService.difficultyGetter === 'None' ? 'Spieler' : (isPlayerTurn ? 'Spieler' : 'Bot')}}
+      </div>
+      <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
+      <div *ngIf=" gameService.difficultyGetter === 'None'  "><h5>Zeit: {{time}}</h5></div> 
+  
     </div>
-    <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
-    <div *ngIf=" gameService.difficultyGetter === 'None'  "><h5>Zeit: {{time}}</h5></div> 
-
-  </div>
-
-  <div class="right">
-    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeModal()"></button>
-  </div>
-</div>
-
-<div class="modal-body">
-  <app-board></app-board> <!-- Spielfeld anzeigen -->
-</div>
-
-<div class="modal-footer">
-  <div class="container">
-    <b>Aufgedeckte Paare:</b>
-    <div class="item">
-      Spieler : {{playerPoints}}
+  
+    <div class="right">
+      <button type="button" class="xp-btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeModal()"></button>
     </div>
-    <div *ngIf="this.gameService.difficultyGetter !== 'None' " class="center">
-      Bot : {{botPoints}}
-    </div>
-
   </div>
-  <div class="right">
-    <button class="btn btn-secondary" (click)="closeModal()">Schließen</button>
+  
+  <div class="modal-body">
+    <app-board></app-board> <!-- Spielfeld anzeigen -->
+  </div>
+  
+  <div class="modal-footer xp-program-footer">
+    <div *ngIf="this.gameService.difficultyGetter !== 'None' "class="container">
+      <b>Aufgedeckte Paare:</b>
+      <div class="item">
+        Spieler : {{playerPoints}}
+      </div>
+      <div class="center">
+        Bot : {{botPoints}}
+      </div>
+    </div>
+    <div class="right">
+      <button class="btn xp-program-btn" (click)="closeModal()">Schließen</button>
+    </div>
   </div>
 </div>

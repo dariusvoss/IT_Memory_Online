@@ -1,7 +1,6 @@
 .scoreboard {
   width: 100%;
   margin: 0 auto;
-  padding: 20px;
 }
 
 .modal-header {
@@ -26,4 +25,5 @@ th {
 
 .right {
     text-align: right;
+    padding: 10px;
 }
