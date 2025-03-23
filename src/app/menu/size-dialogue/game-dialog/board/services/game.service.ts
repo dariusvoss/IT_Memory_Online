@@ -326,14 +326,14 @@ export class GameService {
 
   /** 🔄 Wechselt den Zug zwischen Spieler und Bot */
   private switchTurn() {
-    setTimeout(() => this.isPlayerTurn = !this.isPlayerTurn, this.visibleDelay);
-
-    if (!this.isPlayerTurn && this.difficulty !== 'None') {
-      console.log('Bot ist am Zug!');
-      setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
-    } else {
-      console.log('Spieler ist am Zug!');
-    }
+    setTimeout(() => {this.isPlayerTurn = !this.isPlayerTurn
+      if (!this.isPlayerTurn && this.difficulty !== 'None') {
+        console.log('Bot ist am Zug!');
+        setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
+      } else {
+        console.log('Spieler ist am Zug!');
+      }
+    } , this.visibleDelay);
   }
 
   //-------------------------------------------------------------------------------------//

@@ -8,6 +8,10 @@
     /* background-color: aqua; */
 }
 
+.dropdown-menu {
+    background-color: #e4e4e4;
+}
+
 .dropdown-item {
     cursor: pointer;
 }

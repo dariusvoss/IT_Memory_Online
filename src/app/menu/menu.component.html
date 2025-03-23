@@ -12,9 +12,34 @@
           data-bs-toggle="dropdown" aria-expanded="false">
         </button>
         <ul class="dropdown-menu">
-          <li><a class="dropdown-item" (click)="selectEasy()">Leicht</a></li>
-          <li><a class="dropdown-item" (click)="selectMedium()">Mittel</a></li>
-          <li><a class="dropdown-item" (click)="selectHard()">Schwer</a></li>
+          <div style>
+            <h5 
+            style="text-align: center; 
+                    padding: 5px;
+                    border-bottom: 1px solid #808080"
+            >Schwierigkeitsgrad:</h5>
+          </div>
+          <li><a 
+            class="dropdown-item"
+            style="text-align: center;"
+            (click)="selectEasy()"
+            data-bs-toggle="tooltip"
+            title="Der Bot merkt sich keine Karten und deckt zufällig auf."
+          >Leicht</a></li>
+          <li><a 
+            class="dropdown-item"
+            style="text-align: center;"
+            (click)="selectMedium()"
+            data-bs-toggle="tooltip"
+            title="Der Bot merkt sich die Karten, die er aufgedeckt hat und verwendet sie, um Paare zu finden."
+          >Mittel</a></li>
+          <li><a 
+            class="dropdown-item"
+            style="text-align: center;"
+            (click)="selectHard()"
+            data-bs-toggle="tooltip"
+            title="Der Bot merkt sich alle aufgedeckten Karten (sowohl vom Spieler als auch von ihm selbst) und verwendet sie, um Paare zu finden."
+          >Schwer</a></li>
         </ul>
       </div>
       <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
