@@ -1,29 +1,20 @@
-.scoreboard {
-  width: 100%;
-  margin: 0 auto;
+/* Scoreboard-Tabelle */
+.scoreboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0 10px; /* Abstand zwischen Header und Body */
 }
 
-.modal-header {
+.scoreboard-table th, .scoreboard-table td {
+    border: 1px solid #ddd;
+    padding: 8px; /* Abstand zwischen Linien und Textinhalt */
     text-align: center;
 }
 
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 10px; /* Abstand zwischen Header und Body */
+.scoreboard-table th {
+    background-color: #f2f2f2;
 }
 
-th, td {
-  border: 1px solid #ddd;
-  padding: 8px; /* Abstand zwischen Linien und Textinhalt */
-  text-align: center;
-}
-
-th {
-  background-color: #f2f2f2;
-}
-
-.right {
-    text-align: right;
-    padding: 10px;
+.scoreboard-table tbody tr {
+    border: none; /* Entfernt die Lücken zwischen den Zeilen des Tabellenbodys */
 }

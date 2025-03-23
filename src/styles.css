@@ -186,3 +186,10 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #a00000;
     border: 2px solid #808080;
 }
+
+/* Logo-Stil */
+.app-logo {
+    max-width: 200px; /* Maximale Breite des Logos */
+    border-radius: 5px;
+    margin-bottom: 20px; /* Abstand zum Titel */
+}
