@@ -1,6 +1,7 @@
 <div class="scoreboard">
-  <h2 style="text-align: center">Scoreboard</h2>
-  <hr>
+  <div class="modal-header xp-header" style="justify-content: center;">
+    <h2 style="text-align: center">Scoreboard</h2>
+  </div>
   <table>
     <thead>
       <tr>
@@ -25,8 +26,7 @@
       </tr>
     </tbody>
   </table>
-  <hr>
-  <div class="right">
-    <button class="btn btn-secondary" (click)="closeModal()">Schließen</button>
+  <div class="modal-footer xp-footer">
+    <button class="btn xp-btn" (click)="closeModal()">Schließen</button>
   </div>
 </div>
