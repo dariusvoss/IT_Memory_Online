@@ -3,6 +3,7 @@ import { GameService } from './services/game.service';
 import { CardComponent } from './card/card.component';
 import { CommonModule, Time } from '@angular/common';
 import { TimerService } from './services/timer.service';
+import { GameDialogComponent } from '../game-dialog.component';
 
 @Component({
   selector: 'app-board',
@@ -18,9 +19,10 @@ export class BoardComponent implements OnInit {
   cards: any[] = [];
   gridTemplateColumns: string = '';
   gridTemplateRows: string = '';
-  timerService: TimerService =  inject(TimerService);
+  timerService: TimerService = inject(TimerService);
+  gameDialog: GameDialogComponent = inject(GameDialogComponent);
 
-  constructor(private gameService: GameService) {}
+  constructor(private gameService: GameService) { }
 
   ngOnInit() {
     this.cards = this.gameService.getCards();
@@ -28,12 +30,13 @@ export class BoardComponent implements OnInit {
   }
 
   onCardClick(card: any) {
-    if(this.gameService.difficultyGetter === 'None' && !this.timerService.isTimerRunning) {
+    if (this.gameService.difficultyGetter === 'None' && !this.timerService.isTimerRunning) {
       this.timerService.startTimer();
-    } 
+      this.gameDialog.currentImage = '../assets/icons/Stop.png';
+    }
     // Ist der Spieler nicht am Zug wird nichts gemacht
-    if(this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
-    this.gameService.flipCard(card);
+    if (this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
+      this.gameService.flipCard(card);
     }
   }
 
