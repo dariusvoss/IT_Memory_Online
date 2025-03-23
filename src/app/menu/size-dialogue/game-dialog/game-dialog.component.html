@@ -20,8 +20,8 @@
     <app-board></app-board> <!-- Spielfeld anzeigen -->
   </div>
   
-  <div class="modal-footer xp-program-footer">
-    <div *ngIf="this.gameService.difficultyGetter !== 'None' "class="container">
+  <div class="modal-footer xp-program-footer" >
+    <div *ngIf="this.gameService.difficultyGetter !== 'None' "class="container" >
       <b>Aufgedeckte Paare:</b>
       <div class="item">
         Spieler : {{playerPoints}}
@@ -30,8 +30,15 @@
         Bot : {{botPoints}}
       </div>
     </div>
-    <div class="right">
-      <button class="btn xp-program-btn" (click)="closeModal()">Schließen</button>
+    <div class="d-flex justify-content-between" style=" width: 100%;">
+      <div class="" >
+        <div *ngIf="gameService.difficultyGetter === 'None'" class="position-absolute botom-0 start-50" >
+          <img [src]="currentImage" alt="" class="icon"  (click)="stopResumeTimerBtn()">
+        </div> 
+        <img style="margin-left: 100px;" src="..\assets\icons\Settings.png" alt="" class="visually-hidden icon "  (click)="closeModal()">
+      </div>
+      
+        <button class="xp-program-btn " (click)="closeModal()">Schließen</button>
     </div>
   </div>
 </div>

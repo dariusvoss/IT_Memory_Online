@@ -1,6 +1,6 @@
 <div class="menu-container">
   <div class="d-grid gap-3" style="width: 65%">
-    <p style="text-align: center;">Wähle ein Spielmodus:</p>
+    <p style="text-align: center;" *ngIf="!gameService.gameStarted">Wähle ein Spielmodus:</p>
     <div class="d-grid gap-0" style="width: 100%" *ngIf="!gameService.gameStarted">
       <!-- Wenn das Spiel noch nicht gestartet wurde -->
       <div class="btn-group dropend">

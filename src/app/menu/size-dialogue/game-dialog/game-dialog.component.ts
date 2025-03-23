@@ -18,6 +18,7 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   private timer: TimerService = inject(TimerService);
   private currentTime: number = 0;
   private gameEndedSubscription: Subscription = new Subscription;
+  currentImage: string ='../assets/icons/Stop.png';
 
   constructor(public activeModal: NgbActiveModal) {}
 
@@ -53,6 +54,19 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   get isPlayerTurn(): boolean {
     return this.gameService.isPlayerTurn; // Dynamisch aus dem Service abrufen
   }
+
+  stopResumeTimerBtn() {
+    if (this.timer.isTimerRunning) {
+      this.timer.stopTimer();
+      this.currentImage = '../assets/icons/Play.png';
+      this.gameService.isPlayerTurn = false; 
+    } else {
+      this.timer.startTimer();
+      this.currentImage = '../assets/icons/Stop.png';
+      this.gameService.isPlayerTurn = true;
+    }
+  }
+
 
   closeModal() {
     this.timer.stopTimer();
