@@ -1,7 +1,7 @@
 <div class="menu-container">
-  <div class="d-grid gap-3" style="width: 65%">
-    <p style="text-align: center;" *ngIf="!gameService.gameStarted">Wähle ein Spielmodus:</p>
+  <div class="d-grid gap-2" style="width: 65%">
     <div class="d-grid gap-0" style="width: 100%" *ngIf="!gameService.gameStarted">
+      <p style="text-align: center; margin-bottom: 2px;">Wähle einen Spielmodus:</p>
       <!-- Wenn das Spiel noch nicht gestartet wurde -->
       <div class="btn-group dropend">
         <button type="button" class="btn xp-btn" style="width: 90%;" (click)="chooseSize('PvB')">
@@ -20,10 +20,11 @@
       <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
       <button type="button" class="btn xp-btn" (click)="chooseSize('PvT')">Spieler vs. Zeit</button>
     </div>
-    <div class="d-grid gap-0" style="width: 100%" *ngIf="gameService.gameStarted">
+    <div class="d-grid gap-0" style="width: 100%; margin-top: 5px" *ngIf="gameService.gameStarted">
       <button type="button" class="btn xp-btn" (click)="resumeDialog()">Spiel fortsetzen</button>
       <button type="button" class="btn xp-btn" (click)="restartDialog()">Neues Spiel starten</button>
     </div>
-    <button type="button" class="btn xp-program-btn" (click)="openScoreboard()">Scoreboard</button>
+    <hr style="margin: 0px; padding: 4px;">
+    <button type="button" class="btn xp-btn" (click)="openScoreboard()">Scoreboard</button>
   </div>
 </div>

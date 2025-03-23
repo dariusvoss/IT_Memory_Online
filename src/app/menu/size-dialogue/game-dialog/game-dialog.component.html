@@ -1,19 +1,23 @@
 <div class="xp-program-dialog">
   <div class="position-relative modal-header xp-program-header">
     <div class="container">
-      <h4>Memory-Spiel</h4>
-      <div class="item">
+      <h4 *ngIf="this.gameService.difficultyGetter !== 'None' ">Spieler vs. Bot ({{this.gameService.difficultyGetter}})</h4>
+      <h4 *ngIf="this.gameService.difficultyGetter === 'None' ">Spieler vs. Zeit</h4>
+      <div class="item" *ngIf="this.gameService.difficultyGetter !== 'None' ">
         <b>Am Zug ist:</b>
-        {{this.gameService.difficultyGetter === 'None' ? 'Spieler' : (isPlayerTurn ? 'Spieler' : 'Bot')}}
+        {{isPlayerTurn ? 'Spieler' : 'Bot'}}
       </div>
       <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
-      <div *ngIf=" gameService.difficultyGetter === 'None'  "><h5>Zeit: {{time}}</h5></div> 
+      <div *ngIf=" gameService.difficultyGetter === 'None'  "><h4>Zeit: {{time}}</h4></div> 
     </div>
   
     <div class="position-absolute top-50 end-0 translate-middle-y">
       <button type="button" class="xp-program-btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeModal()"></button>
     </div>
   </div>
+
+  <p *ngIf="this.gameService.difficultyGetter !== 'None' ">Spiele gegen den Computer und versuche, die meisten Paare zu finden!</p>
+  <p *ngIf="this.gameService.difficultyGetter === 'None' ">Finde alle Paare so schnell wie möglich!</p>
   
   <div class="modal-body">
     <app-board></app-board> <!-- Spielfeld anzeigen -->
@@ -22,7 +26,7 @@
   <div class="modal-footer xp-program-footer" >
     <div *ngIf="this.gameService.difficultyGetter !== 'None' "class="container" >
       <b>Aufgedeckte Paare:</b>
-      <div class="item">
+      <div>
         Spieler : {{playerPoints}}
       </div>
       <div class="center">

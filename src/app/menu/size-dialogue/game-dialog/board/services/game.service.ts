@@ -326,7 +326,7 @@ export class GameService {
 
   /** 🔄 Wechselt den Zug zwischen Spieler und Bot */
   private switchTurn() {
-    this.isPlayerTurn = !this.isPlayerTurn;
+    setTimeout(() => this.isPlayerTurn = !this.isPlayerTurn, this.visibleDelay);
 
     if (!this.isPlayerTurn && this.difficulty !== 'None') {
       console.log('Bot ist am Zug!');
