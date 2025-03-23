@@ -8,8 +8,9 @@ h1, h2, h3, h4, h5, h6 {
     font-family: Trebuchet MS, sans-serif;
 }
 
-h4 {
-    text-align: center;
+.right {
+    align-self: self-end;
+    justify-self: end;
 }
 
 /* Programm-Dialog-Stil für Windows XP */
@@ -31,7 +32,7 @@ h4 {
 /* Programm-Header-Stil für Windows XP */
 .xp-program-header {
     background-color: #0f87f6;
-    border-bottom: 1px solid #5b1aff;
+    border-bottom: 1px solid #045bac;
     padding: 10px;
     text-align: center;
     color: white;
@@ -56,7 +57,7 @@ h4 {
 /* Programm-Footer-Stil für Windows XP */
 .xp-program-footer {
     background-color: #0f87f6;
-    border-top: 1px solid #5b1aff;
+    border-top: 1px solid #045bac;
     padding: 10px;
     text-align: center;
     color: white;
@@ -87,7 +88,7 @@ h4 {
 /* Programm-Button-Stil für Windows XP */
 .xp-program-btn {
     background: linear-gradient(to bottom, #0f87f6, #0f73f6);
-    border: 1px solid #5b1aff;
+    border: 1px solid #045bac;
     border-radius: 3px;
     color: white;
     padding: 5px;
@@ -103,15 +104,15 @@ h4 {
 
 .xp-program-btn:active {
     background: linear-gradient(to bottom, #0f73f6, #0e62e4);
-    border: 1px solid #4a09ee;
+    border: 1px solid #054785;
 }
 
 /* Close-Button-Stil für Windows XP */
 .xp-btn-close {
-    background: linear-gradient(to bottom, #f82b2b, red);
-    border: 2px solid white;
+    background: linear-gradient(to bottom, #e4e4e4, #d4d0c8);
+    border: 2px solid black;
     border-radius: 3px;
-    color: white;
+    color: black;
     width: 30px;
     height: 30px;
     position: relative;
@@ -126,7 +127,7 @@ h4 {
     left: 50%;
     width: 12px;
     height: 2px;
-    background-color: white;
+    background-color: black;
 }
 
 .xp-btn-close::before {
@@ -138,10 +139,50 @@ h4 {
 }
 
 .xp-btn-close:hover {
-    background-color: darkred;
+    background-color: #a5a5a5;
 }
 
 .xp-btn-close:active {
+    background-color: #8d8d8d;
+}
+
+/* Programm-Close-Button-Stil für Windows XP */
+.xp-program-btn-close {
+    background: linear-gradient(to bottom, #f82b2b, red);
+    border: 2px solid white;
+    border-radius: 3px;
+    margin: 10px;
+    color: white;
+    width: 30px;
+    height: 30px;
+    position: relative;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.xp-program-btn-close::before, .xp-program-btn-close::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 2px;
+    background-color: white;
+}
+
+.xp-program-btn-close::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.xp-program-btn-close::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.xp-program-btn-close:hover {
+    background-color: darkred;
+}
+
+.xp-program-btn-close:active {
     background-color: #a00000;
     border: 2px solid #808080;
 }

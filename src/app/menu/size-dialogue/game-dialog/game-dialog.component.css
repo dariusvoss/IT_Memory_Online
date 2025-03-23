@@ -20,11 +20,6 @@
   .center {
     justify-self: center;
   }
-  
-  .right {
-    align-self: self-end;
-    justify-self: end;
-  }
 
   .icon {
     height: 40px; 

@@ -218,6 +218,7 @@ export class GameService {
   private checkMatch() {
     let isPair = false;
     if (this.selectedCards[0].id === this.selectedCards[1].id) {
+    // if (true) {
       // Karten passen zusammen -> bleiben aufgedeckt
       this.selectedCards.forEach((card) => (card.matched = true));
       this.pairsFound++;
@@ -277,7 +278,7 @@ export class GameService {
   }
 
   checkWin() {
-    if (this.pairsFound === this.selectedImages.length) {
+    if (this.pairsFound === this.selectedImages.length) { 
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
       let timerank = this.calculateRank(finTime, this.cards.length);
@@ -287,7 +288,7 @@ export class GameService {
       const record = {
         date: formattedDate,
         mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
-        difficultyLevel: this.difficulty,
+        difficultyLevel: this.difficulty !== 'None' ? this.difficulty : '-',
         deckSize: this.getSelectedSize(this.cards.length),
         points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
         rank: this.difficulty === 'None' ? this.calculateRank(finTime, this.cards.length) : '-',

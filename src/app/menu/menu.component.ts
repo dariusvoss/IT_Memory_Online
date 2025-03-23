@@ -43,7 +43,7 @@ export class MenuComponent {
     if (this.gameService.difficultyGetter === 'None') {
       this.timer.startTimer();
     }
-    this.modalService.open(GameDialogComponent, { size: 'lg', centered: true });
+    this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
   }
 
   restartDialog() {
@@ -51,7 +51,7 @@ export class MenuComponent {
   }
 
   chooseSize(mode: string) {
-    const modalRef = this.modalService.open(SizeDialogueComponent);
+    const modalRef = this.modalService.open(SizeDialogueComponent, { size: 'md', centered: true });
 
     modalRef.result.then((result) => {
       if (result) {
