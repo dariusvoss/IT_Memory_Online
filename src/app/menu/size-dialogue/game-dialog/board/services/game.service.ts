@@ -313,8 +313,6 @@ export class GameService {
         }
       } else {
         modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
-        const rank = this.calculateRank(finTime, this.cards.length);
-        
       }
       this.addGameRecord(record);
       console.log(this.gameRecords);
