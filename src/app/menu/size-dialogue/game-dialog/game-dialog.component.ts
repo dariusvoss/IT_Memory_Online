@@ -23,7 +23,6 @@ export class GameDialogComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (this.mode === 'PvT') {
-      this.timer.startTimer();
       this.timer.getTimer().subscribe(time => this.currentTime = time); // Subscribe to the timer observable
     }
 

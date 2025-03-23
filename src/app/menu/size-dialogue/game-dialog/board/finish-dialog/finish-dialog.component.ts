@@ -11,6 +11,7 @@ import { ScoreboardComponent } from '../../../../scoreboard/scoreboard.component
 })
 export class FinishDialogComponent {
   @Input() time: string = ''; // Zeit des Spiels
+  @Input() rank: string = ''; // Rang des Spielers
   @Input() playerPoints: number = 0; // Punkte des Spielers
   @Input() botPoints: number = 0; // Punkte des Bots
   @Input() difficulty: string = ''; // Schwierigkeitsgrad

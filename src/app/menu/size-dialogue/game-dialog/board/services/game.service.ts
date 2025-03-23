@@ -246,12 +246,14 @@ export class GameService {
     if (this.pairsFound === this.selectedImages.length) {
       this.timerService.stopTimer();
       let finTime = this.timerService.getFormattedTimer();
+      let timerank = this.calculateRank(finTime, this.cards.length);
       const currentDate = new Date();
       const formattedDate = currentDate.toLocaleString();
       console.log('Spiel beendet!' + this.difficulty);
       // Öffne den Finish-Dialog und speichere die Referenz
       const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
       modalRef.componentInstance.time = finTime;
+      modalRef.componentInstance.rank = timerank;
       modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
       modalRef.componentInstance.botPoints = this.pairsFoundBot;
       modalRef.componentInstance.difficulty = this.difficulty;
@@ -275,14 +277,13 @@ export class GameService {
         });
       } else {
         modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
-        const rank = this.calculateRank(finTime, this.cards.length);
         this.gameRecords.push({
           date: formattedDate,
           mode: 'Spieler vs. Zeit',
           difficultyLevel: '-',
           deckSize: this.getSelectedSize(this.cards.length),
           points: '-',
-          rank: rank,
+          rank: timerank,
           time: finTime
         });
       }
