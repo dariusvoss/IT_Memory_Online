@@ -384,7 +384,8 @@ export class GameService {
     for (const [id, index] of this.botMemory) {
       const pair = availableCards.filter(card => card.id === id);
       if (pair.length === 2) {
-        pair.forEach(card => this.flipCard(card));
+        this.flipCard(pair[0]);
+        setTimeout(() => {this.flipCard(pair[1]);}, this.delay); // Verzögerung beim Aufdecken der zweiten Karte
         return;
       }
     }
@@ -401,7 +402,8 @@ export class GameService {
     for (const [id, index] of this.botMemory) {
       const pair = availableCards.filter(card => card.id === id);
       if (pair.length === 2) {
-        pair.forEach(card => this.flipCard(card));
+        this.flipCard(pair[0]);
+        setTimeout(() => {this.flipCard(pair[1]);}, this.delay); // Verzögerung beim Aufdecken der zweiten Karte
         return;
       }
     }
