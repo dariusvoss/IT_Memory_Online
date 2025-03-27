@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { GameService } from '../dialog/board/services/game.service';
+import { GameService } from '../size-dialogue/game-dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 

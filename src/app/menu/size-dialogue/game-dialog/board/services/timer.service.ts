@@ -9,6 +9,7 @@ export class TimerService {
   private secondsElapsed = 0;
   private timer$ = new BehaviorSubject<number>(this.secondsElapsed);
   private intervalSubscription: any;
+  isTimerRunning = false;
 
   constructor() {
     console.log('TimerService');
@@ -16,6 +17,7 @@ export class TimerService {
 
   startTimer() {
     if (!this.intervalSubscription) {
+      this.isTimerRunning = true;
       this.intervalSubscription = interval(1000)
         .pipe(map(() => ++this.secondsElapsed))
         .subscribe((seconds) => this.timer$.next(seconds));
@@ -24,6 +26,7 @@ export class TimerService {
 
   stopTimer() {
     if (this.intervalSubscription) {
+      this.isTimerRunning = false;
       this.intervalSubscription.unsubscribe();
       this.intervalSubscription = null;
     }

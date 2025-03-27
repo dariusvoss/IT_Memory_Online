@@ -1,0 +1,16 @@
+.board {
+  display: grid;
+  justify-content: center;
+  align-items: center;
+  gap: 10px; /* Abstand zwischen den Karten */
+  max-width: 100%; /* Maximale Breite des Containers */
+  margin: auto; /* Zentriert den Container */
+}
+
+app-card {
+  justify-content: center;
+  align-items: center;
+  width: 100%; /* Karten passen sich der Breite der Spalten an */
+  height: auto; /* Höhe wird automatisch angepasst */
+  box-sizing: border-box; /* Berücksichtigt Padding und Border in der Breite */
+}

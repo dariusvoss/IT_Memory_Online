@@ -1,10 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { DialogComponent } from '../dialog/dialog.component';
-import { SizeDialogueComponent } from '../size-dialogue/size-dialogue.component';
-import { GameService } from '../dialog/board/services/game.service';
+import { GameDialogComponent } from './size-dialogue/game-dialog/game-dialog.component';
+import { SizeDialogueComponent } from './size-dialogue/size-dialogue.component';
+import { GameService } from './size-dialogue/game-dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
-import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
+import { ScoreboardComponent } from './scoreboard/scoreboard.component';
+import { TimerService } from './size-dialogue/game-dialog/board/services/timer.service';
 
 @Component({
   selector: 'app-menu',
@@ -14,6 +15,7 @@ import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 })
 export class MenuComponent {
   gameService = inject(GameService);
+  timer = inject(TimerService);   
   private isDifficultChanged: boolean = false;
   private selectedSize: number = 16; // Standardgröße
 
@@ -38,7 +40,10 @@ export class MenuComponent {
   }
 
   resumeDialog() {
-    this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    if (this.gameService.difficultyGetter === 'None') {
+      this.timer.startTimer();
+    }
+    this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
   }
 
   restartDialog() {
@@ -46,7 +51,7 @@ export class MenuComponent {
   }
 
   chooseSize(mode: string) {
-    const modalRef = this.modalService.open(SizeDialogueComponent);
+    const modalRef = this.modalService.open(SizeDialogueComponent, { size: 'md', centered: true });
 
     modalRef.result.then((result) => {
       if (result) {
@@ -71,14 +76,14 @@ export class MenuComponent {
       this.gameService.setDifficulty('Leicht');
     }
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvB'; // Spielmodus übergeben
   }
 
   openPvTDialog() {
     this.gameService.setDifficulty('None');
     this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(DialogComponent, { size: 'lg', centered: true });
+    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
     modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
   }
 

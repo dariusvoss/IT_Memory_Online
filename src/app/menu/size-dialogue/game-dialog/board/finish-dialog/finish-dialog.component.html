@@ -1,0 +1,23 @@
+<div class="modal-header xp-header">
+  <div class="position-relative" style="width: 100%;">
+    <h4 class="modal-title">Spiel beendet</h4>
+    <div class="position-absolute top-50 end-0 translate-middle-y">
+      <button type="button" class="xp-btn-close" data-bs-dismiss="modal" aria-label="Close" (click)="closeDialog()"></button>
+    </div>
+  </div>
+</div>
+<div class="modal-body xp-body">
+  <p class="content">{{message}}</p>
+  <div class="content">
+    <p *ngIf="difficulty === 'None'">Deine Zeit: <strong>{{ time }}</strong><br>Dein Rang: <strong>{{ rank }}</strong></p>
+    <div *ngIf="playerPoints !== undefined && botPoints !== undefined">
+      <div *ngIf="difficulty !== 'None'">Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>Bot-Punkte: <strong>{{ botPoints }}</strong></div>
+    </div>
+  </div>
+</div>
+<div class="modal-footer container xp-footer justify-content-center">
+  <div class="row justify-content-center">
+    <button class="btn xp-btn col" (click)="openScoreboard()">Scoreboard</button>
+    <button class="btn xp-btn col" (click)="closeDialog()">OK</button>
+  </div>
+</div>
