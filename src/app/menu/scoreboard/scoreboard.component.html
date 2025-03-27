@@ -9,8 +9,8 @@
         <th>Modus</th>
         <th>Schwierigkeitsgrad</th>
         <th>Kartensatzgröße</th>
-        <th>Punkte</th>
-        <th>Rang</th>
+        <th>Punkte / Rang</th>
+        <!-- <th>Rang</th> -->
         <th>Zeit</th>
       </tr>
     </thead>
@@ -20,8 +20,8 @@
         <td>{{ record.mode }}</td>
         <td>{{ record.difficultyLevel }}</td>
         <td>{{ record.deckSize }}</td>
-        <td>{{ record.points }}</td>
-        <td>{{ record.rank }}</td>
+        <td *ngIf="record.points !== '-'">{{ record.points }}</td>
+        <td *ngIf="record.rank !== '-'">{{ record.rank }}</td>
         <td>{{ record.time }}</td>
       </tr>
     </tbody>
