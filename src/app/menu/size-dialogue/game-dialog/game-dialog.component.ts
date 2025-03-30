@@ -58,11 +58,9 @@ export class GameDialogComponent implements OnInit, OnDestroy {
     if (this.timer.isTimerRunning) {
       this.timer.stopTimer();
       this.currentImage = '../assets/icons/Play.png';
-      this.gameService.isPlayerTurn = false; // damit der Spieler nicht weitere Karten aufdecken kann
     } else {
       this.timer.startTimer();
       this.currentImage = '../assets/icons/Stop.png';
-      this.gameService.isPlayerTurn = true;
     }
   }
 
