@@ -39,19 +39,19 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   }
 
   get time(): string {
-    return this.timer.getFormattedTimer(); // Dynamisch aus dem Service abrufen
+    return this.timer.getFormattedTimer();
   }
 
   get botPoints(): number {
-    return this.gameService.pairsFoundBotGetter; // Dynamisch aus dem Service abrufen
+    return this.gameService.pairsFoundBotGetter;
   }
 
   get playerPoints(): number {
-    return this.gameService.pairsFoundPlayerGetter; // Dynamisch aus dem Service abrufen
+    return this.gameService.pairsFoundPlayerGetter;
   }
 
   get isPlayerTurn(): boolean {
-    return this.gameService.isPlayerTurn; // Dynamisch aus dem Service abrufen
+    return this.gameService.isPlayerTurn;
   }
 
   stopResumeTimerBtn() {

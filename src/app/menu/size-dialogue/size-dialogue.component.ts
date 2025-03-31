@@ -12,7 +12,7 @@ export class SizeDialogueComponent {
   constructor(public activeModal: NgbActiveModal) {}
 
   selectSize(cardCount: number) {
-    this.selectedCardCount = cardCount;  // Größe setzen
-    this.activeModal.close(this.selectedCardCount);  // Aktuelles Fenster schließen
+    this.selectedCardCount = cardCount;
+    this.activeModal.close(this.selectedCardCount);  // Schließen des Modals und Rückgabe der Anzahl der Karten
   }
 }

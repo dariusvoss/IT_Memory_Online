@@ -7,7 +7,6 @@
         <b>Am Zug ist:</b>
         {{isPlayerTurn ? 'Spieler' : 'Bot'}}
       </div>
-      <!-- <div class="center"><h5>Highscore: highscore</h5></div>-->
       <div *ngIf=" gameService.difficultyGetter === 'None'  "><h4>Zeit: {{time}}</h4></div> 
     </div>
   
@@ -20,7 +19,8 @@
   <p *ngIf="this.gameService.difficultyGetter === 'None' ">Finde alle Paare so schnell wie möglich!</p>
   
   <div class="modal-body">
-    <app-board></app-board> <!-- Spielfeld anzeigen -->
+    <!-- Anzeigen der Board-Component mit dem für das Spiel verwendeten Kartensatz -->
+    <app-board></app-board>
   </div>
   
   <div class="modal-footer xp-program-footer" >

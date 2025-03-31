@@ -1,28 +1,22 @@
 
 .container {
-    display: grid;
-    grid-template-columns: 30% 30% 30% ;
-    align-items: center; 
-    width: 100%;
-    padding: 10px;
-    /* background-color: #f0f0f0; */
-    /* text-align: center; */
-  }
+  display: grid;
+  grid-template-columns: 30% 30% 30% ;
+  align-items: center; 
+  width: 100%;
+  padding: 10px;
+}
   
-  .item {
-    justify-self: start;
-    font-size: 20px;
-    /* margin: 5px;
-    padding: 10px 20px; */
-    /* background-color: #007bff; */
-    /* color: white; */
-  }
-  
-  .center {
-    justify-self: center;
-  }
+.item {
+  justify-self: start;
+  font-size: 20px;
+}
 
-  .icon {
-    height: 40px; 
-    width: 40px;
-  }
+.center {
+  justify-self: center;
+}
+
+.icon {
+  height: 40px; 
+  width: 40px;
+}

@@ -2,8 +2,8 @@
   <div class="d-grid gap-2" style="width: 65%">
     <div class="d-grid gap-0" style="width: 100%" *ngIf="!gameService.gameStarted">
       <p style="text-align: center; margin-bottom: 2px;">Wähle einen Spielmodus:</p>
-      <!-- Wenn das Spiel noch nicht gestartet wurde -->
       <div class="btn-group dropend">
+        <!-- Wenn noch kein Spieldurchlauf gestartet wurde -->
         <button type="button" class="btn xp-btn" style="width: 90%;" (click)="chooseSize('PvB')">
           Spieler vs. Bot ({{gameService.difficultyGetter}})
         </button>
@@ -42,10 +42,10 @@
           >Schwer</a></li>
         </ul>
       </div>
-      <!-- <button type="button" class="btn btn-outline-primary" (click)="openPvBDialog()">Spieler vs. Bot</button> -->
       <button type="button" class="btn xp-btn" (click)="chooseSize('PvT')">Spieler vs. Zeit</button>
     </div>
     <div class="d-grid gap-0" style="width: 100%; margin-top: 5px" *ngIf="gameService.gameStarted">
+      <!-- Wenn ein Spieldurchlauf bereits gestartet wurde -->
       <button type="button" class="btn xp-btn" (click)="resumeDialog()">Spiel fortsetzen</button>
       <button type="button" class="btn xp-btn" (click)="restartDialog()">Neues Spiel starten</button>
     </div>

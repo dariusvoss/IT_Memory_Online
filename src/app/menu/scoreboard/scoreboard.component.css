@@ -1,13 +1,12 @@
-/* Scoreboard-Tabelle */
 .scoreboard-table {
     width: 100%;
     border-collapse: collapse;
-    border-spacing: 0 10px; /* Abstand zwischen Header und Body */
+    border-spacing: 0 10px;
 }
 
 .scoreboard-table th, .scoreboard-table td {
     border: 1px solid #ddd;
-    padding: 8px; /* Abstand zwischen Linien und Textinhalt */
+    padding: 8px;
     text-align: center;
 }
 
@@ -16,5 +15,5 @@
 }
 
 .scoreboard-table tbody tr {
-    border: none; /* Entfernt die Lücken zwischen den Zeilen des Tabellenbodys */
+    border: none;
 }

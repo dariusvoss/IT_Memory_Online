@@ -8,19 +8,18 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
   providedIn: 'root'
 })
 export class GameService {
-  isPlayerTurn: boolean = true; // Startet mit dem Spieler
+  isPlayerTurn: boolean = true; // Spieler ist als erstes am Zug
   gameStarted: boolean = false; // Gibt an, ob ein Spieldurchlauf bereits gestartet wurde
   gameEnded: EventEmitter<void> = new EventEmitter<void>(); // Event-Emitter für das Spielende
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
-  private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (id -> index)
+  private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (index -> id)
   private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
   private deckSize: string = '';
-  // private botDelay = 3000; // Verzögerung für den Bot
-  private delay = 800; // Verzögerung verzögerung allgemein
-  private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten
+  private delay = 800; // Verzögerung allgemein
+  private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten nach dem Aufdecken
 
 
   //-------------------------------------------------------------------------------------//
@@ -141,7 +140,7 @@ export class GameService {
     console.log(this.gameRecords);
   }
 
-  /** 🔄 Erstellt das Kartendeck und mischt es */
+  /** Initialisiert den Kartenstapel mit der gewählten Anzahl an Karten, ebenso wie die Bot-Logik */
   initializeGame(cardCount: number) {
     const selectedSize = cardCount;
     this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
@@ -163,7 +162,7 @@ export class GameService {
     }
   }
 
-  /**Setzt den GameService in seinen Initialzustand zurück, sodass der Spieler ein neues Spiel starten kann*/
+  /** Setzt den GameService in seinen Initialzustand zurück, sodass der Spieler ein neues Spiel starten kann */
   resetGame() {
     this.cards.forEach(card => {
       card.flipped = false;
@@ -180,7 +179,7 @@ export class GameService {
     this.difficulty = 'Leicht';
   }
 
-  /** 🎴 Mischt die Karten mit dem Fisher-Yates-Algorithmus */
+  /** Mischt die Karten mit dem Fisher-Yates-Algorithmus */
   private shuffleCards(cards: any[]): any[] {
     for (let i = cards.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -189,26 +188,24 @@ export class GameService {
     return cards;
   }
 
-  /** 📋 Gibt das aktuelle Kartendeck zurück */
+  /** Gibt das aktuelle Kartendeck zurück */
   getCards() {
     return this.cards;
   }
 
-  /** 🎭 Karte umdrehen */
+  /** Dreht eine Karte um */
   flipCard(card: any) {
 
     if (this.selectedCards.length < 2 && !card.flipped && !card.matched) {
       card.flipped = true;
       this.selectedCards.push(card);
 
-      // ist der Bot am Zug und die Schwierigkeit ist medium oder hard, wird die Karte gemerkt
+      // Ist der Bot am Zug und die Schwierigkeit ist 'Mittel' oder 'Schwer', wird die Karte gemerkt
       if (this.difficulty === 'Mittel' && !this.isPlayerTurn) {
         this.rememberCard(card);
-      } else if (this.difficulty === 'Schwer') { // Der Bot merkt sich immer die Karten auch wenn der Spieler am Zug ist
+      } else if (this.difficulty === 'Schwer') { // Der Bot merkt sich alle aufgedeckten Karten, auch wenn der Spieler am Zug ist
         this.rememberCard(card);
       }
-      // console.log(this.selectedCards);
-      // console.log(this.botMemory);
     }
 
     if (this.selectedCards.length === 2) {
@@ -216,7 +213,7 @@ export class GameService {
     }
   }
 
-  /** ✅ Prüft, ob zwei Karten zusammenpassen */
+  /** Prüft, ob zwei Karten zusammenpassen */
   private checkMatch() {
     let isPair = false;
     if (this.selectedCards[0].id === this.selectedCards[1].id) {
@@ -333,7 +330,7 @@ export class GameService {
     return false;
   }
 
-  /** 🔄 Wechselt den Zug zwischen Spieler und Bot */
+  /** Wechselt den Zug zwischen Spieler und Bot */
   private switchTurn() {
     setTimeout(() => {this.isPlayerTurn = !this.isPlayerTurn
       if (!this.isPlayerTurn && this.difficulty !== 'None') {
@@ -349,43 +346,37 @@ export class GameService {
   //------------------------------------- Bot-Logik -------------------------------------//
   //-------------------------------------------------------------------------------------//
 
-  /** 🤖 Bot-Aktion basierend auf Schwierigkeitsgrad */
+  /** Bot-Aktion basierend auf Schwierigkeitsgrad */
   botMove() {
     const availableCards = this.getCards().filter(card => !card.flipped && !card.matched);
 
     if (this.difficulty === 'Leicht') {
       this.randomBotMove(availableCards);
-      // console.log('easy');
     } else if (this.difficulty === 'Mittel' || 'Schwer') {
       this.botMemoryMove(availableCards);
-      // this.botDelay = Math.round(this.botDelay * 1.05);  // Verzögerung für den Bot verlängert sich bei jedem Zug
-      // console.log('medium');
     } else if (this.difficulty === 'None') {
       this.isPlayerTurn = true;
     }
-    // console.log(this.botDelay);
   }
 
+  /** Bot deckt zwei zufällige Karten auf */
   private randomBotMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
-    // console.log(availableCards.length);
     const firstCard = availableCards[Math.floor(Math.random() * availableCards.length)];
     this.flipCard(firstCard);
-    // console.log(firstCard);
 
     setTimeout(() => {
       const secondAvailable = this.getCards().filter(card => !card.flipped && !card.matched);
       const secondCard = secondAvailable[Math.floor(Math.random() * secondAvailable.length)];
       this.flipCard(secondCard);
-      // console.log(secondCard);
     }, this.delay);
-    // setTimeout(() =>{console.log('hallo'); this.checkMatch();}, 100000);// wird nicht ausgeführt
   }
 
+  /** Bot schaut in botMemory, ob er sich zwei Karten für ein Paar gemerkt hat und deckt diese dann auf, ansonsten deckt er zwei zufällige Karten auf*/
   private botMemoryMove(availableCards: any[]) {
     if (availableCards.length < 2) return;
 
-    // Prüfen, ob der Bot ein Paar kennt (zwei Einträge mit demselben Value)
+    // Prüfen, ob der Bot ein Paar kennt (zwei Einträge mit dem selben Value)
     let pairs: [number, number] | null = null;
 
     for (const [key1, value1] of this.botMemory) {
@@ -419,8 +410,7 @@ export class GameService {
     this.randomBotMove(availableCards);
   }
 
-  /** 🧠 Bot merkt sich Karten */
-  // mögliche Verbesserung: Bot merkt sich nur die Karten letzten 3 züge (botMemory.size <= 3)
+  /** Bot merkt sich Karten */
   private rememberCard(card: any) {
     const maxMemorySize = this.getMaxMemorySize(); // Maximale Anzahl der Karten, die sich der Bot merken kann
 
@@ -439,7 +429,6 @@ export class GameService {
       // Neue Karte hinzufügen
       this.botMemory.set(this.getCards().indexOf(card), card.id);
       console.log('Bot merkt sich Karte ' + card.id + ' an Position ' + this.getCards().indexOf(card));
-      console.log(this.botMemory);
     }
   }
 
@@ -447,11 +436,11 @@ export class GameService {
     const cardCount = this.cards.length;
 
     if (cardCount === 16) {
-      return 4; // 4 Karten für 16 Karten
+      return 4; // 4 Karten für Kartensatzgröße Klein (16 Karten)
     } else if (cardCount === 36) {
-      return 8; // 8 Karten für 36 Karten
+      return 8; // 8 Karten für Kartensatzgröße Mittel (36 Karten)
     } else if (cardCount === 64) {
-      return 10; // 10 Karten für 64 Karten
+      return 10; // 10 Karten für Kartensatzgröße Groß (64 Karten)
     }
 
     return 2; // Standardwert, falls keine Größe passt

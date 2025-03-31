@@ -189,7 +189,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Logo-Stil */
 .app-logo {
-    max-width: 200px; /* Maximale Breite des Logos */
+    max-width: 200px;
     border-radius: 100px;
-    margin-bottom: 20px; /* Abstand zum Titel */
+    margin-bottom: 20px;
 }

@@ -42,7 +42,7 @@ export class BoardComponent implements OnInit {
       this.timerService.startTimer();
       this.gameDialog.currentImage = '../assets/icons/Stop.png';
     }
-    // Ist der Spieler nicht am Zug wird nichts gemacht
+    // Ist der Spieler nicht am Zug, wird nichts gemacht
     if (this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
       this.gameService.flipCard(card);
     }
@@ -51,11 +51,11 @@ export class BoardComponent implements OnInit {
   private setGridTemplate() {
     const cardCount = this.cards.length;
     const containerWidth = this.elRef.nativeElement.querySelector('.board').offsetWidth;
-    const cardWidth = 100; // Breite einer Karte in Pixeln
+    const cardWidth = 100;
     let columns: number;
     let rows: number;
 
-    if (containerWidth >= 800) { // Maximale Größe des Browserfensters
+    if (containerWidth >= 800) {
       if (cardCount === 16) {
         columns = 4;
         rows = 4;
