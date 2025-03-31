@@ -415,10 +415,10 @@ export class GameService {
     const maxMemorySize = this.getMaxMemorySize(); // Maximale Anzahl der Karten, die sich der Bot merken kann
 
     if (!card.matched) {
-      // Wenn die Karte bereits in der Queue ist, nichts tun
+      // Wenn die Karte bereits in dem Ringpuffer ist, nichts tun
       if (this.botMemory.has(this.getCards().indexOf(card))) return;
 
-      // Wenn die Queue voll ist, das älteste Element entfernen
+      // Wenn der Ringpuffer voll ist, das älteste Element entfernen
       if (this.botMemory.size >= maxMemorySize) {
         const firstKey = this.botMemory.keys().next().value; // Erstes Element in der Map
         if (firstKey !== undefined) {
