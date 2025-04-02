@@ -6,6 +6,7 @@ import { GameService } from './size-dialog/game-dialog/board/services/game.servi
 import { CommonModule } from '@angular/common';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { TimerService } from './size-dialog/game-dialog/board/services/timer.service';
+import { DifficultyDialogComponent } from './difficulty-dialog/difficulty-dialog.component';
 @Component({
   selector: 'app-menu',
   imports: [CommonModule],
@@ -60,6 +61,10 @@ export class MenuComponent {
     }).catch((error) => {
       console.log('Dialog dismissed');
     });
+  }
+
+  chooseDifficulty() {
+    this.modalService.open(DifficultyDialogComponent, { size: 'lg', centered: true});
   }
 
   openGameDialog(mode: string) {

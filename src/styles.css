@@ -194,6 +194,27 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 20px;
 }
 
+/* Styling für Bootstrap-Cards */
+.card {
+    background-color: #f8f9fa;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #d4d0c8;
+    border-bottom: 1px solid #808080;
+    font-family: Trebuchet MS, sans-serif;
+    text-align: center;
+}
+
+.card-body {
+    color: #000;
+    font-family: Tahoma, sans-serif;
+    font-size: 14px;
+    padding: 20px;
+}
+
 /* Styling für das Popover */
 .popover {
     background-color: #f8f9fa;

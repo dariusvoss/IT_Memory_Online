@@ -1,0 +1,37 @@
+.difficulty-selection {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.card.difficulty-card {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 156px;
+}
+
+.card.difficulty-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.card-text {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.difficulty-easy {
+    background-color: #8beba1;
+}
+
+.difficulty-medium {
+    background-color: #ffda6a;
+}
+
+.difficulty-hard {
+    background-color: #db6874;
+}
