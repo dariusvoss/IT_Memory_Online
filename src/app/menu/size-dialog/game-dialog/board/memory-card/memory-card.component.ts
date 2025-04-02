@@ -10,9 +10,9 @@ import { CommonModule } from '@angular/common';
       <div *ngIf="!flipped" class="card-back"></div>
     </div>
   `,
-    styleUrls: ['./card.component.css']
+    styleUrls: ['./memory-card.component.css']
 })
-export class CardComponent {
+export class MemoryCardComponent {
   @Input() image!: string;
   @Input() cardId!: number;
   @Input() flipped = false;

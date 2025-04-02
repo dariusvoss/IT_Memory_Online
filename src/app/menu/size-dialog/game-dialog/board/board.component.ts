@@ -1,13 +1,13 @@
 import { Component, inject, OnInit, HostListener, ElementRef } from '@angular/core';
 import { GameService } from './services/game.service';
-import { CardComponent } from './card/card.component';
+import { MemoryCardComponent } from './memory-card/memory-card.component';
 import { CommonModule } from '@angular/common';
 import { TimerService } from './services/timer.service';
 import { GameDialogComponent } from '../game-dialog.component';
 
 @Component({
   selector: 'app-board',
-  imports: [CardComponent, CommonModule],
+  imports: [MemoryCardComponent, CommonModule],
   template: `
     <div class="board" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
       <app-card 

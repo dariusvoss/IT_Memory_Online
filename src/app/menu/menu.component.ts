@@ -1,12 +1,11 @@
 import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { GameDialogComponent } from './size-dialogue/game-dialog/game-dialog.component';
-import { SizeDialogueComponent } from './size-dialogue/size-dialogue.component';
-import { GameService } from './size-dialogue/game-dialog/board/services/game.service';
+import { GameDialogComponent } from './size-dialog/game-dialog/game-dialog.component';
+import { SizeDialogComponent } from './size-dialog/size-dialogue.component';
+import { GameService } from './size-dialog/game-dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
-import { TimerService } from './size-dialogue/game-dialog/board/services/timer.service';
-
+import { TimerService } from './size-dialog/game-dialog/board/services/timer.service';
 @Component({
   selector: 'app-menu',
   imports: [CommonModule],
@@ -51,7 +50,7 @@ export class MenuComponent {
   }
 
   chooseSize(mode: string) {
-    const modalRef = this.modalService.open(SizeDialogueComponent, { size: 'md', centered: true });
+    const modalRef = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
 
     modalRef.result.then((result) => {
       if (result) {
