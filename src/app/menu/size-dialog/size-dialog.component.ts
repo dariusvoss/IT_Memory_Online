@@ -4,8 +4,8 @@ import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 @Component({
     selector: 'app-size-dialog',
     imports: [],
-    templateUrl: './size-dialogue.component.html',
-    styleUrl: './size-dialogue.component.css'
+    templateUrl: './size-dialog.component.html',
+    styleUrl: './size-dialog.component.css'
 })
 export class SizeDialogComponent {
   private selectedCardCount: number = 16; // Standardgröße

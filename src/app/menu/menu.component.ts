@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { GameDialogComponent } from './size-dialog/game-dialog/game-dialog.component';
-import { SizeDialogComponent } from './size-dialog/size-dialogue.component';
+import { SizeDialogComponent } from './size-dialog/size-dialog.component';
 import { GameService } from './size-dialog/game-dialog/board/services/game.service';
 import { CommonModule } from '@angular/common';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
