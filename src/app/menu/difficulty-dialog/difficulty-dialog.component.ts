@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
+import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-difficulty-dialog',
@@ -8,10 +8,9 @@ import { GameService } from '../size-dialog/game-dialog/board/services/game.serv
   styleUrl: './difficulty-dialog.component.css'
 })
 export class DifficultyDialogComponent {
-  constructor(private gameService: GameService) {}
+  constructor(public activeModal: NgbActiveModal) {}
 
-  selectDifficulty(difficulty: 'Leicht' | 'Mittel' | 'Schwer') {
-    this.gameService.setDifficulty(difficulty);
-    console.log(`${difficulty} selected`);
+  selectDifficulty(difficulty: string) {
+    this.activeModal.close(difficulty);
   }
 }

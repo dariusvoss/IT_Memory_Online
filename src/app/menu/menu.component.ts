@@ -7,37 +7,20 @@ import { CommonModule } from '@angular/common';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { TimerService } from './size-dialog/game-dialog/board/services/timer.service';
 import { DifficultyDialogComponent } from './difficulty-dialog/difficulty-dialog.component';
+
 @Component({
   selector: 'app-menu',
   imports: [CommonModule],
   templateUrl: './menu.component.html',
   styleUrl: './menu.component.css'
 })
+
 export class MenuComponent {
   gameService = inject(GameService);
-  timer = inject(TimerService);   
-  private isDifficultChanged: boolean = false;
+  timer = inject(TimerService);
   private selectedSize: number = 16; // Standardgröße
 
   constructor(private modalService: NgbModal) {}
-
-  selectHard() {
-    this.isDifficultChanged = true;
-    this.gameService.setDifficulty('Schwer');
-    console.log('Hard selected');
-  }
-
-  selectMedium() {
-    this.isDifficultChanged = true;
-    this.gameService.setDifficulty('Mittel');
-    console.log('Medium selected');
-  }
-
-  selectEasy() {
-    this.isDifficultChanged = true;
-    this.gameService.setDifficulty('Leicht');
-    console.log('Easy selected');
-  }
 
   resumeDialog() {
     if (this.gameService.difficultyGetter === 'None') {
@@ -51,44 +34,45 @@ export class MenuComponent {
   }
 
   chooseSize(mode: string) {
-    const modalRef = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
+    const modalRef_size = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
 
-    modalRef.result.then((result) => {
+    modalRef_size.result.then((result) => {
       if (result) {
         this.selectedSize = result;
         this.openGameDialog(mode);
       }
     }).catch((error) => {
-      console.log('Dialog dismissed');
+      console.log('SizeDialog dismissed');
     });
   }
 
-  chooseDifficulty() {
-    this.modalService.open(DifficultyDialogComponent, { size: 'lg', centered: true});
+  configurePlaythrough(mode: string) {
+    if (mode === 'PvB') {
+      // DifficultyDialog öffnen, um Schwierigkeit auszuwählen
+      const modalRef_difficulty = this.modalService.open(DifficultyDialogComponent, {size: 'lg', centered: true});
+
+      modalRef_difficulty.result.then((result) => {
+        if (result) {
+          this.gameService.setDifficulty(result);
+          console.log('Difficulty ' + {result} + ' selected');
+          // SizeDialog öffnen, um Kartensatzgröße auszuwählen
+          this.chooseSize(mode);
+        }
+      }).catch((error) => {
+        console.log('DifficultyDialog dismissed');
+      })
+    } else {
+      this.chooseSize(mode);
+    }
   }
 
   openGameDialog(mode: string) {
-    if (mode === 'PvB') {
-      this.openPvBDialog();
-    } else if (mode === 'PvT') {
-      this.openPvTDialog();
-    }
-  }
-
-  openPvBDialog() {
-    if (!this.isDifficultChanged) {
-      this.gameService.setDifficulty('Leicht');
+    if (mode === 'PvT') {
+      this.gameService.setDifficulty('None');
     }
     this.gameService.initializeGame(this.selectedSize);
     const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
-    modalRef.componentInstance.mode = 'PvB'; // Spielmodus übergeben
-  }
-
-  openPvTDialog() {
-    this.gameService.setDifficulty('None');
-    this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
-    modalRef.componentInstance.mode = 'PvT'; // Spielmodus übergeben
+    modalRef.componentInstance.mode = this.gameService.difficultyGetter !== 'None' ? 'PvB' : 'PvT'; // Spielmodus übergeben
   }
 
   openScoreboard() {
