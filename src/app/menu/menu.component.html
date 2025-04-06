@@ -1,46 +1,32 @@
 <div class="menu-container">
   <div class="d-grid gap-2" style="width: 65%">
     <div class="d-grid gap-0" style="width: 100%" *ngIf="!gameService.gameStarted">
-      <p style="text-align: center; margin-bottom: 2px;">Wähle einen Spielmodus:</p>
-      <div class="btn-group dropend">
+      <p style="text-align: center; margin-bottom: 10px;">Wähle einen Spielmodus:</p>
+      <div class="col justify-content-center">
         <!-- Wenn noch kein Spieldurchlauf gestartet wurde -->
-        <button type="button" class="btn xp-btn" style="width: 90%;" (click)="configurePlaythrough('PvB')"> Spieler vs. Bot </button>
-        <!-- <button type="button"
-          class="btn-primary-custom-width btn xp-btn dropdown-toggle dropdown-toggle-split "
-          data-bs-toggle="dropdown" aria-expanded="false">
-        </button>
-        <ul class="dropdown-menu">
-          <div style>
-            <h5 
-            style="text-align: center; 
-                    padding: 5px;
-                    border-bottom: 1px solid #808080"
-            >Schwierigkeitsgrad:</h5>
+        <div class="card difficulty-card" (click)="configurePlaythrough('PvB')">
+          <div class="card-body text-center">
+            <h5 class="card-title xp-header">Spieler vs. Bot</h5>
+            <div class="card-text">
+              <p>Spiele gegen den Computer und versuche, die meisten Paare zu finden!</p>
+              <b>Hinweis:</b>
+              <p>Bei den Schwierigkeitsgraden "Mittel" und "Schwer" kann sich der Bot - je nach Kartensatzgröße - eine jeweils unterschiedliche Anzahl an Karten merken.</p>
+            </div>
           </div>
-          <li><a 
-            class="dropdown-item"
-            style="text-align: center;"
-            (click)="selectEasy()"
-            data-bs-toggle="tooltip"
-            title="Der Bot merkt sich keine Karten und deckt zufällig auf."
-          >Leicht</a></li>
-          <li><a 
-            class="dropdown-item"
-            style="text-align: center;"
-            (click)="selectMedium()"
-            data-bs-toggle="tooltip"
-            title="Der Bot merkt sich die Karten, die er aufgedeckt hat und verwendet sie, um Paare zu finden."
-          >Mittel</a></li>
-          <li><a 
-            class="dropdown-item"
-            style="text-align: center;"
-            (click)="selectHard()"
-            data-bs-toggle="tooltip"
-            title="Der Bot merkt sich alle aufgedeckten Karten (sowohl vom Spieler als auch von ihm selbst) und verwendet sie, um Paare zu finden."
-          >Schwer</a></li>
-        </ul> -->
+        </div>
+        <div class="card difficulty-card" (click)="configurePlaythrough('PvT')">
+          <div class="card-body text-center">
+            <h5 class="card-title xp-header">Spieler vs. Zeit</h5>
+            <div class="card-text">
+              <p>Versuche, schnellstmöglich alle Paare zu finden und den besten Rang zu erreichen!</p>
+              <b>Hinweis:</b>
+              <p>Der Timer startet, sobald du die erste Karte zum Umdrehen anklickst. Des weiteren berechnet sich der Rang, den du erhältst, aus deiner benötigten Zeit
+                zum Aufdecken aller Paare sowie der deiner gewählten Kartensatzgröße.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-      <button type="button" class="btn xp-btn" (click)="configurePlaythrough('PvT')">Spieler vs. Zeit</button>
     </div>
     <div class="d-grid gap-0" style="width: 100%; margin-top: 5px" *ngIf="gameService.gameStarted">
       <!-- Wenn ein Spieldurchlauf bereits gestartet wurde -->

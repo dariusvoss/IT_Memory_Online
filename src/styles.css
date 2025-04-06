@@ -196,9 +196,16 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Styling für Bootstrap-Cards */
 .card {
-    background-color: #f8f9fa;
+    background-color: #e4e4e4;
     box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
     margin-bottom: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .card-header {
@@ -212,7 +219,18 @@ h1, h2, h3, h4, h5, h6 {
     color: #000;
     font-family: Tahoma, sans-serif;
     font-size: 14px;
-    padding: 20px;
+    padding: 0;
+}
+
+.card-title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.card-text {
+    font-size: 14px;
+    color: black;
+    padding: 10px;
 }
 
 /* Styling für das Popover */

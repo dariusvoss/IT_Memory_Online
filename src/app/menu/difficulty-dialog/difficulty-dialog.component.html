@@ -7,25 +7,25 @@
         <p>Wähle den Schwierigkeitsgrad für den Bot:</p>
         <div class="row justify-content-center">
           <div class="col-4">
-            <div class="card difficulty-card difficulty-easy" (click)="selectDifficulty('Leicht')">
+            <div class="card difficulty-card" (click)="selectDifficulty('Leicht')">
               <div class="card-body text-center">
-                <h5 class="card-title">Leicht</h5>
+                <h5 class="card-title xp-header">Leicht</h5>
                 <p class="card-text">Ideal für Anfänger. Der Bot merkt sich keine Karten und wählt rein zufällig Karten aus.</p>
               </div>
             </div>
           </div>
           <div class="col-4">
-            <div class="card difficulty-card difficulty-medium" (click)="selectDifficulty('Mittel')">
+            <div class="card difficulty-card" (click)="selectDifficulty('Mittel')">
               <div class="card-body text-center">
-                <h5 class="card-title">Mittel</h5>
+                <h5 class="card-title xp-header">Mittel</h5>
                 <p class="card-text">Eine moderate Herausforderung. Der Bot merkt sich die Karten, die er selbst aufgedeckt hat.</p>
               </div>
             </div>
           </div>
           <div class="col-4">
-            <div class="card difficulty-card difficulty-hard" (click)="selectDifficulty('Schwer')">
+            <div class="card difficulty-card" (click)="selectDifficulty('Schwer')">
               <div class="card-body text-center">
-                <h5 class="card-title">Schwer</h5>
+                <h5 class="card-title xp-header">Schwer</h5>
                 <p class="card-text">Für Profis. Der Bot merkt sich alle aufgedeckten Karten, sowohl die vom Spieler als auch die eigenen.</p>
               </div>
             </div>
