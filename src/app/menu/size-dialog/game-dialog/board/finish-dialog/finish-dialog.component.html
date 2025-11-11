@@ -10,10 +10,18 @@
 <div class="modal-body xp-body">
   <p class="content">{{message}}</p>
   <div class="content">
-    <p *ngIf="difficulty === 'None'">Deine Zeit: <strong>{{ time }}</strong><br>Dein Rang: <strong>{{ rank }}</strong></p>
-    <div *ngIf="playerPoints !== undefined && botPoints !== undefined">
-      <div *ngIf="difficulty !== 'None'">Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>Bot-Punkte: <strong>{{ botPoints }}</strong></div>
-    </div>
+    @if (difficulty === 'None') {
+      <p>Deine Zeit: <strong>{{ time }}</strong><br>Dein Rang: <strong>{{ rank }}</strong></p>
+    }
+    @if (playerPoints !== undefined && botPoints !== undefined) {
+      <div>
+        @if (difficulty !== 'None') {
+          <div>
+            Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>Bot-Punkte: <strong>{{ botPoints }}</strong>
+          </div>
+        }
+      </div>
+    }
   </div>
 </div>
 

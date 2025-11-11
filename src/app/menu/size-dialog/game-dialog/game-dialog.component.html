@@ -1,13 +1,20 @@
 <div class="xp-program-dialog">
   <div class="position-relative modal-header xp-program-header">
     <div class="container">
-      <h4 *ngIf="this.gameService.difficultyGetter !== 'None' ">Spieler vs. Bot ({{this.gameService.difficultyGetter}})</h4>
-      <h4 *ngIf="this.gameService.difficultyGetter === 'None' ">Spieler vs. Zeit</h4>
+      @if (this.gameService.difficultyGetter !== 'None') {
+        <h4>Spieler vs. Bot ({{this.gameService.difficultyGetter}})</h4>
+      } @else if (this.gameService.difficultyGetter === 'None') {
+        <h4>Spieler vs. Zeit</h4>
+      }
       <div class="item" *ngIf="this.gameService.difficultyGetter !== 'None' ">
         <b>Am Zug ist:</b>
         {{isPlayerTurn ? 'Spieler' : 'Bot'}}
       </div>
-      <div *ngIf=" gameService.difficultyGetter === 'None'  "><h4>Zeit: {{time}}</h4></div> 
+      @if (this.gameService.difficultyGetter === 'None') {
+        <div>
+          <h4>Zeit: {{time}}</h4>
+        </div> 
+      }
     </div>
   
     <div class="position-absolute top-50 end-0 translate-middle-y">
@@ -15,8 +22,11 @@
     </div>
   </div>
 
-  <p *ngIf="this.gameService.difficultyGetter !== 'None' ">Spiele gegen den Computer und versuche, die meisten Paare zu finden!</p>
-  <p *ngIf="this.gameService.difficultyGetter === 'None' ">Finde alle Paare so schnell wie möglich!</p>
+  @if (gameService.difficultyGetter !== 'None') {
+    <p>Spiele gegen den Computer und versuche, die meisten Paare zu finden!</p>
+  } @else if (this.gameService.difficultyGetter === 'None') {
+    <p>Finde alle Paare so schnell wie möglich!</p>
+  }
   
   <div class="modal-body">
     <!-- Anzeigen der Board-Component mit dem für das Spiel verwendeten Kartensatz -->
@@ -24,20 +34,24 @@
   </div>
   
   <div class="modal-footer xp-program-footer" >
-    <div *ngIf="this.gameService.difficultyGetter !== 'None' "class="container" >
-      <b>Aufgedeckte Paare:</b>
-      <div>
-        Spieler : {{playerPoints}}
+    @if(gameService.difficultyGetter !== 'None') {
+      <div class="container" >
+        <b>Aufgedeckte Paare:</b>
+        <div>
+          Spieler : {{playerPoints}}
+        </div>
+        <div class="center">
+          Bot : {{botPoints}}
+        </div>
       </div>
-      <div class="center">
-        Bot : {{botPoints}}
-      </div>
-    </div>
+    }
     <div class="d-flex justify-content-between" style=" width: 100%;">
       <div class="" >
-        <div *ngIf="gameService.difficultyGetter === 'None'" class="position-absolute botom-0 start-50" >
-          <img [src]="currentImage" alt="" class="icon"  (click)="stopResumeTimerBtn()">
-        </div> 
+        @if (gameService.difficultyGetter === 'None') {
+          <div class="position-absolute botom-0 start-50" >
+            <img [src]="currentImage" alt="" class="icon"  (click)="stopResumeTimerBtn()">
+          </div>
+        } 
         <img style="margin-left: 100px;" src="..\assets\icons\Settings.png" alt="" class="visually-hidden icon "  (click)="closeModal()">
       </div>
       

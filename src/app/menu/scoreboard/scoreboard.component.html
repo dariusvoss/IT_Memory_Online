@@ -14,15 +14,21 @@
       </tr>
     </thead>
     <tbody>
-      <tr *ngFor="let record of gameRecords">
-        <td>{{ record.date }}</td>
-        <td>{{ record.mode }}</td>
-        <td>{{ record.difficultyLevel }}</td>
-        <td>{{ record.deckSize }}</td>
-        <td *ngIf="record.points !== '-'">{{ record.points }}</td>
-        <td *ngIf="record.rank !== '-'">{{ record.rank }}</td>
-        <td>{{ record.time }}</td>
-      </tr>
+      @for (record of gameRecords; track record) {
+        <tr *ngFor="let record of gameRecords">
+          <td>{{ record.date }}</td>
+          <td>{{ record.mode }}</td>
+          <td>{{ record.difficultyLevel }}</td>
+          <td>{{ record.deckSize }}</td>
+          @if (record.points !== '-') {
+            <td>{{ record.points }}</td>
+          }
+          @if (record.rank !== '-') {
+            <td>{{ record.rank }}</td>
+          }
+          <td>{{ record.time }}</td>
+        </tr>
+      }
     </tbody>
   </table>
   <div class="modal-footer xp-footer">

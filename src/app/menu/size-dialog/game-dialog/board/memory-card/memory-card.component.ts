@@ -6,8 +6,11 @@ import { CommonModule } from '@angular/common';
     imports: [CommonModule],
     template: `
     <div class="memory-card" [class.flipped]="flipped" (click)="onClick()">
-      <img *ngIf="flipped" [src]="image" />
-      <div *ngIf="!flipped" class="memory-card-back"></div>
+      @if (flipped) {
+        <img [src]="image"/>
+      } @else {
+        <div class="memory-card-back"></div>
+      }
     </div>
   `,
     styleUrls: ['./memory-card.component.css']

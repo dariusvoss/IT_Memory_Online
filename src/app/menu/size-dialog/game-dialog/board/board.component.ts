@@ -10,10 +10,12 @@ import { GameDialogComponent } from '../game-dialog.component';
   imports: [MemoryCardComponent, CommonModule],
   template: `
     <div class="board" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
-      <app-card 
-        style="display: flex; justify-content: center; align-items: center;" 
-        *ngFor="let card of cards" 
-        [image]="card.image" [cardId]="card.id" [flipped]="card.flipped" (cardClicked)="onCardClick(card)"></app-card>
+      @for (card of cards; track card) {
+        <app-card 
+          style="display: flex; justify-content: center; align-items: center;"  
+          [image]="card.image" [cardId]="card.id" [flipped]="card.flipped" (cardClicked)="onCardClick(card)">
+        </app-card>
+      }
     </div>
   `,
   styleUrls: ['./board.component.css']
