@@ -5,7 +5,7 @@
 -->
 
 <div class="menu-container">
-  <div class="d-grid gap-2" style="width: 65%">
+  <div class="d-grid gap-2" style="width: 80%">
     <div class="d-grid gap-0" style="width: 80%">
       @if (!gameService.gameStarted) {
         <p style="text-align: center; margin-bottom: 10px;">Wähle einen Spielmodus:</p>
@@ -15,15 +15,21 @@
             <div class="card difficulty-card" (click)="configurePlaythrough('PvB')">
               <div class="card-body text-center">
                 <h5 class="card-title xp-header">Spieler vs. Bot</h5>
-                <div class="row justify-content-center">
-                  <div class="col justify-content-center">
-                    <img src="assets/icons-small/Windows_XP_Icon_User_Accounts.webp" class="card-img-top" alt="People Icon" style="width: 100px; height: 100px; margin: 10px">
+                <div class="d-flex justify-content-center align-items-center flex-nowrap">
+                  <div class="d-flex justify-content-center align-items-center px-2" style="flex: 0 0 auto;">
+                    <img src="assets/icons-small/Windows_XP_Icon_User_Accounts.webp" 
+                         class="card-img-top" 
+                         alt="People Icon" 
+                         style="width: 100px; height: 100px; max-width: 22vw; margin: 10px">
                   </div>
-                  <div class="col justify-content-center" style="margin-top: 15%">
+                  <div class="d-flex justify-content-center align-items-center px-3" style="flex: 0 0 auto;">
                     <p>vs.</p>
                   </div>
-                  <div class="col justify-content-center">
-                    <img src="assets/icons-small/Windows_XP_Clippy_Picture.webp" class="card-img-top" alt="Bot Icon" style="width: 100px; height: 100px; margin: 10px; border-radius: 10px">
+                  <div class="d-flex justify-content-center align-items-center px-2" style="flex: 0 0 auto;">
+                    <img src="assets/icons-small/Windows_XP_Clippy_Picture.webp" 
+                         class="card-img-top" 
+                         alt="Bot Icon" 
+                         style="width: 100px; height: 100px; max-width: 22vw; margin: 10px; border-radius: 10px">
                   </div>
                 </div>
                 <div class="card-text">
@@ -38,6 +44,14 @@
             <div class="card difficulty-card" (click)="configurePlaythrough('PvT')">
               <div class="card-body text-center">
                 <h5 class="card-title xp-header">Spieler vs. Zeit</h5>
+                  <div class="d-flex justify-content-center align-items-center flex-nowrap">
+                    <div class="d-flex justify-content-center align-items-center px-2" style="flex: 0 0 auto;">
+                      <img src="assets/icons-small/Windows_XP_Hourglass_Icon.webp" 
+                           class="card-img-top" 
+                           alt="People Icon" 
+                           style="width: 100px; height: auto; max-width: 22vw; margin: 10px">
+                    </div>
+                  </div>
                 <div class="card-text">
                   <p>Versuche, schnellstmöglich alle Paare zu finden und den besten Rang zu erreichen!</p>
                   <!--<b>Hinweis:</b>
