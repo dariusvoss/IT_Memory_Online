@@ -3,14 +3,14 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { GameDialogComponent } from './size-dialog/game-dialog/game-dialog.component';
 import { SizeDialogComponent } from './size-dialog/size-dialog.component';
 import { GameService } from './size-dialog/game-dialog/board/services/game.service';
-import { CommonModule } from '@angular/common';
+
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { TimerService } from './size-dialog/game-dialog/board/services/timer.service';
 import { DifficultyDialogComponent } from './difficulty-dialog/difficulty-dialog.component';
 
 @Component({
   selector: 'app-menu',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './menu.component.html',
   styleUrl: './menu.component.css'
 })

@@ -1,11 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { CommonModule } from '@angular/common';
+
 import { ScoreboardComponent } from '../../../../scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-finish-dialog',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './finish-dialog.component.html',
   styleUrls: ['./finish-dialog.component.css']
 })

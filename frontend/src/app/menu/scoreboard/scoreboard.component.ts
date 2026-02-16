@@ -1,11 +1,11 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
-import { CommonModule } from '@angular/common';
+
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
   selector: 'app-scoreboard',
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './scoreboard.component.html',
   styleUrls: ['./scoreboard.component.css']
 })
