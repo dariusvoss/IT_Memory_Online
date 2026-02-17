@@ -1,30 +1,51 @@
-import { Injectable, EventEmitter } from '@angular/core';
+import { Injectable, EventEmitter, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { TimerService } from './timer.service';
 import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-
+import { BehaviorSubject, Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameService {
-  isPlayerTurn: boolean = true; // Spieler ist als erstes am Zug
-  gameStarted: boolean = false; // Gibt an, ob ein Spieldurchlauf bereits gestartet wurde
-  gameEnded: EventEmitter<void> = new EventEmitter<void>(); // Event-Emitter für das Spielende
+  private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:8000/api/game';
+  
+  isPlayerTurn: boolean = true;
+  gameStarted: boolean = false;
+  gameEnded: EventEmitter<void> = new EventEmitter<void>();
+  
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
-  private botMemory: Map<number, number> = new Map(); // Bot speichert Karten (index -> id)
-  private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht'; // Schwierigkeitsstufe
+  private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht';
   private deckSize: string = '';
-  private delay = 800; // Verzögerung allgemein
-  private visibleDelay = 500; // Verzögerung für das Umdrehen der Karten nach dem Aufdecken
+  private delay = 800;
+  private visibleDelay = 500;
+  
+  private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
+  private gameRecords: any[] = [];
+  private selectedImages: string[] = [];
+  
+  // Observable für UI Updates
+  private cardsSubject = new BehaviorSubject<any[]>([]);
+  public cards$ = this.cardsSubject.asObservable();
+  
+  private gameStateSubject = new BehaviorSubject<any>(null);
+  public gameState$ = this.gameStateSubject.asObservable();
+
+  constructor(private timerService: TimerService, private modalService: NgbModal) {
+    console.log('GameService initialized');
+    this.loadGameRecords();
+  }
 
 
-  //-------------------------------------------------------------------------------------//
-  //----------------------------------- Getter/Setter -----------------------------------//
-  //-------------------------------------------------------------------------------------//
+
+
+  // ========================= Getter/Setter =========================
 
   public get pairsFoundPlayerGetter(): number {
     return this.pairsFoundPlayer;
@@ -40,7 +61,11 @@ export class GameService {
 
   public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
     this.difficulty = level;
-    //  console.log(this.difficulty);
+    return this.http.post(`${this.apiUrl}/set-difficulty?difficulty=${level}`, {}).pipe(
+      tap(response => {
+        console.log('Difficulty set to:', level);
+      })
+    );
   }
 
   private getSelectedSize(selectedSize: number): string {
@@ -58,391 +83,291 @@ export class GameService {
     return this.gameRecords;
   }
 
-  //--------------------------------------------------------------------------------------//
-  //------------------------------------ Score-cookie ------------------------------------// 
-  //--------------------------------------------------------------------------------------//
+  //-------------------------------------------------------------------------------------//
+  //----------------------------------- Game Logic -----------------------------------//
+  //-------------------------------------------------------------------------------------//
 
-  /* encodeURIComponent: Kodiert den JSON-String, um sicherzustellen, dass er in Cookies gespeichert werden kann.
-  // path=/: Der Cookie ist für die gesamte Website verfügbar.
-  // max-age=31536000: Der Cookie ist 1 Jahr gültig (31536000 Sekunden). */
-  private saveScoreboardToCookies() {
-    const jsonString = JSON.stringify(this.gameRecords); // Scoreboard in JSON umwandeln
-    document.cookie = `scoreboard=${encodeURIComponent(jsonString)}; path=/; max-age=31536000`; // 1 Jahr gültig
+  /**
+   * Initialize a new game with the specified card count
+   * Makes API call to backend and updates local state
+   */
+  initializeGame(cardCount: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/initialize`, { card_count: cardCount }).pipe(
+      tap((response: any) => {
+        this.cards = response.cards;
+        this.cardsSubject.next(this.cards);
+        
+        // Extract selected images from cards for win condition
+        const uniqueIds = new Set(this.cards.map((c: any) => c.id));
+        this.selectedImages = Array.from(uniqueIds);
+        
+        this.selectedCards = [];
+        this.pairsFound = 0;
+        this.pairsFoundPlayer = 0;
+        this.pairsFoundBot = 0;
+        this.gameStarted = true;
+        this.isPlayerTurn = true;
+        
+        console.log('Game initialized:', cardCount, 'cards');
+      })
+    );
   }
 
-  private loadScoreboardFromCookies(): any[] {  
-    const cookies = document.cookie.split('; ');
-    const scoreboardCookie = cookies.find(row => row.startsWith('scoreboard='));
-    if (scoreboardCookie) {
-      const jsonString = decodeURIComponent(scoreboardCookie.split('=')[1]);
-      return JSON.parse(jsonString); // JSON in ein Array umwandeln
-    }
-    return []; // Leeres Array zurückgeben, wenn kein Scoreboard gefunden wurde
+  /**
+   * Reset the game to initial state
+   */
+  resetGame(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/reset`, {}).pipe(
+      tap((response: any) => {
+        this.cards.forEach(card => {
+          card.flipped = false;
+          card.matched = false;
+        });
+        this.cardsSubject.next(this.cards);
+        
+        this.selectedCards = [];
+        this.pairsFound = 0;
+        this.pairsFoundPlayer = 0;
+        this.pairsFoundBot = 0;
+        this.gameStarted = false;
+        this.isPlayerTurn = true;
+        this.timerService.resetTimer();
+        this.difficulty = 'Leicht';
+        
+        console.log('Game reset');
+      })
+    );
   }
 
-
-  private addGameRecord(record: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }) {
-    this.gameRecords.push(record);
-    this.saveScoreboardToCookies(); // Speichere das Scoreboard nach jedem neuen Eintrag
-  }
-
-  
-
-
-
-  //--------------------------------------------------------------------------------------//
-  //------------------------------------- Game-Logik -------------------------------------//
-  //--------------------------------------------------------------------------------------//
-
-
-  private cardImages = [
-    'assets/images-small/Memory_Card_01_Default.webp',
-    'assets/images-small/Memory_Card_02_RTF_02.webp',
-    'assets/images-small/Memory_Card_03_Application_Window.webp',
-    'assets/images-small/Memory_Card_04_Folder_Opened.webp',
-    'assets/images-small/Memory_Card_05_Floppy_Disk.webp',
-    'assets/images-small/Memory_Card_06_Removable_Media.webp',
-    'assets/images-small/Memory_Card_07_Optical_Drive.webp',
-    'assets/images-small/Memory_Card_08_Chip.webp',
-    'assets/images-small/Memory_Card_09_Entire_Network.webp',
-    'assets/images-small/Memory_Card_10_My_Computer.webp',
-    'assets/images-small/Memory_Card_11_Printer.webp',
-    'assets/images-small/Memory_Card_12_Start_Menu_Programs.webp',
-    'assets/images-small/Memory_Card_13_Recent_Documents.webp',
-    'assets/images-small/Memory_Card_14_Control_Panel.webp',
-    'assets/images-small/Memory_Card_15_Search.webp',
-    'assets/images-small/Memory_Card_16_Help_and_Support.webp',
-    'assets/images-small/Memory_Card_17_Run.webp',
-    'assets/images-small/Memory_Card_18_2_Hibernate.webp',
-    'assets/images-small/Memory_Card_19_Sharing_Hand.webp',
-    'assets/images-small/Memory_Card_20_Recycle_Bin(full).webp',
-    'assets/images-small/Memory_Card_21_Administrative_Tools.webp',
-    'assets/images-small/Memory_Card_22_Audio_CD.webp',
-    'assets/images-small/Memory_Card_23_Add.webp',
-    'assets/images-small/Memory_Card_24_Favorites.webp',
-    'assets/images-small/Memory_Card_25_Logout.webp',
-    'assets/images-small/Memory_Card_26_Windows_Update.webp',
-    'assets/images-small/Memory_Card_27_Padlock.webp',
-    'assets/images-small/Memory_Card_28_Delete.webp',
-    'assets/images-small/Memory_Card_29_CAB.webp',
-    'assets/images-small/Memory_Card_30_BAT.webp',
-    'assets/images-small/Memory_Card_31_Font.webp',
-    'assets/images-small/Memory_Card_32_TrueType2.webp'
-  ];
-
-  private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
-  private gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }[] = [];
-  private selectedImages: string[] = [];
-
-  constructor(private timerService: TimerService, private modalService: NgbModal) {
-    console.log('GameService');
-    this.gameRecords = this.loadScoreboardFromCookies();
-    console.log(this.gameRecords);
-  }
-
-  /** Initialisiert den Kartenstapel mit der gewählten Anzahl an Karten, ebenso wie die Bot-Logik */
-  initializeGame(cardCount: number) {
-    const selectedSize = cardCount;
-    this.selectedImages = this.cardImages.slice(0, selectedSize / 2);
-
-    this.cards = this.selectedImages.flatMap((image, index) => [
-      { id: index, image, flipped: false, matched: false },
-      { id: index, image, flipped: false, matched: false },
-    ]);
-
-    this.cards = this.shuffleCards(this.cards);
-    this.selectedCards = [];
-    this.pairsFound = 0;
-    this.gameStarted = true;
-
-    if (this.difficulty !== 'None') {
-      // Bot-Logik initialisieren, falls erforderlich
-      this.botMemory.clear();
-      console.log('Bot-Logik initialisiert!');
-    }
-  }
-
-  /** Setzt den GameService in seinen Initialzustand zurück, sodass der Spieler ein neues Spiel starten kann */
-  resetGame() {
-    this.cards.forEach(card => {
-      card.flipped = false;
-      card.matched = false;
-    });
-    this.selectedCards = [];
-    this.pairsFound = 0;
-    this.pairsFoundPlayer = 0;
-    this.pairsFoundBot = 0;
-    this.botMemory.clear();
-    this.gameStarted = false;
-    this.isPlayerTurn = true;
-    this.timerService.resetTimer();
-    this.difficulty = 'Leicht';
-  }
-
-  /** Mischt die Karten mit dem Fisher-Yates-Algorithmus */
-  private shuffleCards(cards: any[]): any[] {
-    for (let i = cards.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cards[i], cards[j]] = [cards[j], cards[i]];
-    }
-    return cards;
-  }
-
-  /** Gibt das aktuelle Kartendeck zurück */
-  getCards() {
+  /**
+   * Get the current cards
+   * Returns local copy (synced via flipCard and initialize)
+   */
+  getCards(): any[] {
     return this.cards;
   }
 
-  /** Dreht eine Karte um */
-  flipCard(card: any) {
-
+  /**
+   * Flip a card at the given index
+   * Makes API call to backend and updates local state
+   */
+  flipCard(card: any): void {
+    const cardIndex = this.cards.indexOf(card);
+    
+    // Optimistic update - flip immediately
     if (this.selectedCards.length < 2 && !card.flipped && !card.matched) {
       card.flipped = true;
       this.selectedCards.push(card);
+      this.cardsSubject.next([...this.cards]);
+    }
 
-      // Ist der Bot am Zug und die Schwierigkeit ist 'Mittel' oder 'Schwer', wird die Karte gemerkt
-      if (this.difficulty === 'Mittel' && !this.isPlayerTurn) {
-        this.rememberCard(card);
-      } else if (this.difficulty === 'Schwer') { // Der Bot merkt sich alle aufgedeckten Karten, auch wenn der Spieler am Zug ist
-        this.rememberCard(card);
+    // Call backend
+    this.http.post(`${this.apiUrl}/flip-card`, { card_id: cardIndex }).subscribe(
+      (response: any) => {
+        // Update local state from response
+        this.cards = response.cards;
+        this.cardsSubject.next(this.cards);
+        
+        // Check if two cards are selected
+        if (response.selected_cards_count === 2) {
+          setTimeout(() => this.checkMatch(), this.delay);
+        }
+      },
+      error => {
+        console.error('Error flipping card:', error);
+        // Revert optimistic update on error
+        card.flipped = false;
+        const index = this.selectedCards.indexOf(card);
+        if (index > -1) {
+          this.selectedCards.splice(index, 1);
+        }
+        this.cardsSubject.next([...this.cards]);
       }
-    }
-
-    if (this.selectedCards.length === 2) {
-      setTimeout(() => this.checkMatch(), this.delay);
-    }
+    );
   }
 
-  /** Prüft, ob zwei Karten zusammenpassen */
-  private checkMatch() {
-    let isPair = false;
-    if (this.selectedCards[0].id === this.selectedCards[1].id) {
-      // Karten passen zusammen -> bleiben aufgedeckt
-      this.selectedCards.forEach((card) => (card.matched = true));
+  /**
+   * Check if the two selected cards match
+   * This is called after backend processes the flip
+   */
+  private checkMatch(): void {
+    const card1 = this.selectedCards[0];
+    const card2 = this.selectedCards[1];
+    
+    if (card1.id === card2.id) {
+      // Match - cards will stay flipped (backend marked them as matched)
       this.pairsFound++;
+      
       if (this.difficulty === 'None' || this.isPlayerTurn) {
         this.pairsFoundPlayer++;
-      } else {  // Bot
-        this.pairsFoundBot++; // Bot hat ein Paar gefunden 
+      } else {
+        this.pairsFoundBot++;
       }
-      isPair = true;
-
-      // Entferne die Karten des Paares aus dem botMemory
-      this.selectedCards.forEach((card) => {
-        if (this.botMemory.has(this.getCards().indexOf(card))) {
-          this.botMemory.delete(this.getCards().indexOf(card));
-          console.log(`Karte ${card.id} aus botMemory entfernt.`);
-        }
-      });
+      
+      this.selectedCards = [];
+      
+      setTimeout(() => {
+        if (this.checkWin()) return;
+      }, this.delay / 2);
+      
+      // If player's turn and next turn is bot's
+      if (!this.isPlayerTurn) {
+        setTimeout(() => this.botMove(), this.delay);
+      }
     } else {
-      // Karten passen nicht -> umdrehen
-      this.selectedCards.forEach((card) => (setTimeout(() => card.flipped = false, this.visibleDelay)));
-    }
-
-    this.selectedCards = [];
-
-    // Check, ob alle Paare gefunden wurden
-    if (isPair) {
-      setTimeout(() => { if (this.checkWin()) return; }, this.delay / 2);
-    }
-
-    // Wenn kein Paar gefunden wurde, wird gewechselt
-    if (!isPair) {
-      // Zug wechseln (nur, wenn Spieler im Modus "Spieler vs. Bot" spielt)
+      // No match - cards will be flipped back by UI
+      this.selectedCards = [];
+      
+      // Switch turns for bot mode
       if (this.difficulty !== 'None') {
         this.switchTurn();
       }
-    } else if (!this.isPlayerTurn) {
-      setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
     }
   }
 
-  private calculateRank(time: string, deckSize: number): string {
-    const [minutes, seconds] = time.split(':').map(Number);
-    const totalSeconds = minutes * 60 + seconds;
-
-    if (deckSize === 16) {
-      if (totalSeconds < 60) return 'A';
-      if (totalSeconds < 120) return 'B';
-      if (totalSeconds < 180) return 'C';
-      if (totalSeconds < 240) return 'D';
-      return 'E';
-    } else if (deckSize === 36) {
-      if (totalSeconds < 120) return 'A';
-      if (totalSeconds < 240) return 'B';
-      if (totalSeconds < 360) return 'C';
-      if (totalSeconds < 480) return 'D';
-      return 'E';
-    } else if (deckSize === 64) {
-      if (totalSeconds < 180) return 'A';
-      if (totalSeconds < 360) return 'B';
-      if (totalSeconds < 540) return 'C';
-      if (totalSeconds < 720) return 'D';
-      return 'E';
-    }
-    return 'E';
-  }
-
-  checkWin() {
-    if (this.pairsFound === this.selectedImages.length) { 
-      this.timerService.stopTimer();
-      let finTime = this.timerService.getFormattedTimer();
-      let timerank = this.calculateRank(finTime, this.cards.length);
-      const currentDate = new Date();
-      const formattedDate = currentDate.toLocaleString();
-
-      const record = {
-        date: formattedDate,
-        mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
-        difficultyLevel: this.difficulty !== 'None' ? this.difficulty : '-',
-        deckSize: this.getSelectedSize(this.cards.length),
-        points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
-        rank: this.difficulty === 'None' ? this.calculateRank(finTime, this.cards.length) : '-',
-        time: this.difficulty === 'None' ? finTime : '-'
-      };
-
-      console.log('Spiel beendet!' + this.difficulty);
-      // Öffne den Finish-Dialog und speichere die Referenz
-      const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
-      modalRef.componentInstance.time = finTime;
-      modalRef.componentInstance.rank = timerank;
-      modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
-      modalRef.componentInstance.botPoints = this.pairsFoundBot;
-      modalRef.componentInstance.difficulty = this.difficulty;
-
-      if (this.difficulty !== 'None') {
-        if (this.pairsFoundPlayer > this.pairsFoundBot) {
-          modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast gewonnen!';
-        } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
-          modalRef.componentInstance.message = '😢 Schade! Der Bot hat gewonnen!';
-        } else {
-          modalRef.componentInstance.message = '😐 Unentschieden!';
+  /**
+   * Check if the game is won
+   */
+  checkWin(): boolean {
+    this.http.post(`${this.apiUrl}/check-win`, {}).subscribe(
+      (response: any) => {
+        if (response.won) {
+          this.timerService.stopTimer();
+          const finTime = this.timerService.getFormattedTimer();
+          
+          const record = {
+            date: new Date().toLocaleString(),
+            mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
+            difficulty_level: this.difficulty !== 'None' ? this.difficulty : '-',
+            deck_size: this.getSelectedSize(this.cards.length),
+            points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
+            rank: response.rank,
+            time: response.time
+          };
+          
+          // Open finish dialog
+          const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
+          modalRef.componentInstance.time = finTime;
+          modalRef.componentInstance.rank = response.rank;
+          modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
+          modalRef.componentInstance.botPoints = this.pairsFoundBot;
+          modalRef.componentInstance.difficulty = this.difficulty;
+          
+          if (this.difficulty !== 'None') {
+            if (this.pairsFoundPlayer > this.pairsFoundBot) {
+              modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast gewonnen!';
+            } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+              modalRef.componentInstance.message = '😢 Schade! Der Bot hat gewonnen!';
+            } else {
+              modalRef.componentInstance.message = '😐 Unentschieden!';
+            }
+          } else {
+            modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
+          }
+          
+          // Save record
+          this.http.post(`${this.apiUrl}/save-record`, record).subscribe(
+            () => console.log('Record saved'),
+            error => console.error('Error saving record:', error)
+          );
+          
+          this.resetGame().subscribe();
+          this.gameEnded.emit();
+          return true;
         }
-      } else {
-        modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
+        return false;
       }
-      this.addGameRecord(record);
-      console.log(this.gameRecords);
-      this.resetGame();
-      this.gameEnded.emit(); //Signalisierung des Spielendes
-      return true;
-    }
+    );
     return false;
   }
 
-  /** Wechselt den Zug zwischen Spieler und Bot */
-  private switchTurn() {
-    setTimeout(() => {this.isPlayerTurn = !this.isPlayerTurn
+  /**
+   * Switch turn between player and bot
+   */
+  private switchTurn(): void {
+    setTimeout(() => {
+      this.isPlayerTurn = !this.isPlayerTurn;
+      
       if (!this.isPlayerTurn && this.difficulty !== 'None') {
         console.log('Bot ist am Zug!');
-        setTimeout(() => this.botMove(), this.delay); // Bot spielt nach einer kurzen Verzögerung
+        setTimeout(() => this.botMove(), this.delay);
       } else {
         console.log('Spieler ist am Zug!');
       }
-    } , this.visibleDelay);
+    }, this.visibleDelay);
   }
 
   //-------------------------------------------------------------------------------------//
-  //------------------------------------- Bot-Logik -------------------------------------//
+  //------------------------------------- Bot Logic -----------------------------------//
   //-------------------------------------------------------------------------------------//
 
-  /** Bot-Aktion basierend auf Schwierigkeitsgrad */
-  botMove() {
-    const availableCards = this.getCards().filter(card => !card.flipped && !card.matched);
-
-    if (this.difficulty === 'Leicht') {
-      this.randomBotMove(availableCards);
-    } else if (this.difficulty === 'Mittel' || 'Schwer') {
-      this.botMemoryMove(availableCards);
-    } else if (this.difficulty === 'None') {
+  /**
+   * Get bot's next move from backend
+   */
+  botMove(): void {
+    if (this.difficulty === 'None') {
       this.isPlayerTurn = true;
-    }
-  }
-
-  /** Bot deckt zwei zufällige Karten auf */
-  private randomBotMove(availableCards: any[]) {
-    if (availableCards.length < 2) return;
-    const firstCard = availableCards[Math.floor(Math.random() * availableCards.length)];
-    this.flipCard(firstCard);
-
-    setTimeout(() => {
-      const secondAvailable = this.getCards().filter(card => !card.flipped && !card.matched);
-      const secondCard = secondAvailable[Math.floor(Math.random() * secondAvailable.length)];
-      this.flipCard(secondCard);
-    }, this.delay);
-  }
-
-  /** Bot schaut in botMemory, ob er sich zwei Karten für ein Paar gemerkt hat und deckt diese dann auf, ansonsten deckt er zwei zufällige Karten auf*/
-  private botMemoryMove(availableCards: any[]) {
-    if (availableCards.length < 2) return;
-
-    // Prüfen, ob der Bot ein Paar kennt (zwei Einträge mit dem selben Value)
-    let pairs: [number, number] | null = null;
-
-    for (const [key1, value1] of this.botMemory) {
-      for (const [key2, value2] of this.botMemory) {
-        if (key1 !== key2 && value1 === value2) {
-          pairs = [key1, key2]; // Speichere das erste gefundene Paar
-          break;
-        }
-      }
-      if (pairs) break; // Abbrechen, wenn ein Paar gefunden wurde
-    }
-
-    if (pairs) {
-      const [index1, index2] = pairs;
-      const card1 = availableCards.find(card => this.getCards().indexOf(card) === index1);
-      const card2 = availableCards.find(card => this.getCards().indexOf(card) === index2);
-
-      if (card1 && card2) {
-        this.flipCard(card1);
-        console.log(`Bot nimmt gemerkte Karte ${card1.id} an Index ${index1}.`);
-        setTimeout(() => {
-          this.flipCard(card2);
-          console.log(`Bot nimmt gemerkte Karte ${card2.id} an Index ${index2}.`);
-        }, this.delay); // Verzögerung beim Aufdecken der zweiten Karte
-      }
-      
       return;
     }
-
-    // Zufällige Auswahl, wenn kein Paar bekannt ist
-    this.randomBotMove(availableCards);
+    
+    this.http.post(`${this.apiUrl}/bot-move`, {}).subscribe(
+      (response: any) => {
+        // Update game state from response
+        this.cards = response.cards;
+        this.cardsSubject.next(this.cards);
+        this.pairsFoundBot = response.bot_points;
+        
+        console.log('Bot move:', response.move);
+        
+        // Check for win condition after bot move
+        setTimeout(() => {
+          this.checkWin();
+        }, this.delay * 2);
+      },
+      error => console.error('Error executing bot move:', error)
+    );
   }
 
-  /** Bot merkt sich Karten */
-  private rememberCard(card: any) {
-    const maxMemorySize = this.getMaxMemorySize(); // Maximale Anzahl der Karten, die sich der Bot merken kann
+  //-------------------------------------------------------------------------------------//
+  //------------------------------------- Game Records -----------------------------------//
+  //-------------------------------------------------------------------------------------//
 
-    if (!card.matched) {
-      // Wenn die Karte bereits in der Queue ist, nichts tun
-      if (this.botMemory.has(this.getCards().indexOf(card))) return;
-
-      // Wenn die Queue voll ist, das älteste Element entfernen
-      if (this.botMemory.size >= maxMemorySize) {
-        const firstKey = this.botMemory.keys().next().value; // Erstes Element in der Map
-        if (firstKey !== undefined) {
-          this.botMemory.delete(firstKey);
-        }
+  /**
+   * Load game records from backend
+   */
+  private loadGameRecords(): void {
+    this.http.get(`${this.apiUrl}/records`).subscribe(
+      (response: any) => {
+        this.gameRecords = response.records || [];
+        console.log('Game records loaded:', this.gameRecords.length);
+      },
+      error => {
+        console.error('Error loading game records:', error);
+        this.gameRecords = [];
       }
-
-      // Neue Karte hinzufügen
-      this.botMemory.set(this.getCards().indexOf(card), card.id);
-      console.log('Bot merkt sich Karte ' + card.id + ' an Position ' + this.getCards().indexOf(card));
-    }
+    );
   }
 
-  private getMaxMemorySize(): number {
-    const cardCount = this.cards.length;
+  /**
+   * Request to load game records (for manual refresh)
+   */
+  refreshGameRecords(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/records`).pipe(
+      tap((response: any) => {
+        this.gameRecords = response.records || [];
+      })
+    );
+  }
 
-    if (cardCount === 16) {
-      return 4; // 4 Karten für Kartensatzgröße Klein (16 Karten)
-    } else if (cardCount === 36) {
-      return 8; // 8 Karten für Kartensatzgröße Mittel (36 Karten)
-    } else if (cardCount === 64) {
-      return 10; // 10 Karten für Kartensatzgröße Groß (64 Karten)
-    }
-
-    return 2; // Standardwert, falls keine Größe passt
+  /**
+   * Clear all game records
+   */
+  clearGameRecords(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/records`).pipe(
+      tap((): void => {
+        this.gameRecords = [];
+        console.log('Game records cleared');
+      })
+    );
   }
 }

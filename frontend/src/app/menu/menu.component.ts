@@ -30,7 +30,10 @@ export class MenuComponent {
   }
 
   restartDialog() {
-    this.gameService.resetGame();
+    this.gameService.resetGame().subscribe(
+      () => console.log('Game restarted'),
+      error => console.error('Error restarting game:', error)
+    );
   }
 
   chooseSize(mode: string) {
@@ -53,10 +56,14 @@ export class MenuComponent {
 
       modalRef_difficulty.result.then((result) => {
         if (result) {
-          this.gameService.setDifficulty(result);
-          console.log('Difficulty ' + {result} + ' selected');
-          // SizeDialog öffnen, um Kartensatzgröße auszuwählen
-          this.chooseSize(mode);
+          this.gameService.setDifficulty(result).subscribe(
+            () => {
+              console.log('Difficulty ' + result + ' selected');
+              // SizeDialog öffnen, um Kartensatzgröße auszuwählen
+              this.chooseSize(mode);
+            },
+            error => console.error('Error setting difficulty:', error)
+          );
         }
       }).catch((error) => {
         console.log('DifficultyDialog dismissed');
@@ -68,11 +75,23 @@ export class MenuComponent {
 
   openGameDialog(mode: string) {
     if (mode === 'PvT') {
-      this.gameService.setDifficulty('None');
+      this.gameService.setDifficulty('None').subscribe(
+        () => this.initializeAndOpenGame(mode),
+        error => console.error('Error setting difficulty:', error)
+      );
+    } else {
+      this.initializeAndOpenGame(mode);
     }
-    this.gameService.initializeGame(this.selectedSize);
-    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
-    modalRef.componentInstance.mode = this.gameService.difficultyGetter !== 'None' ? 'PvB' : 'PvT'; // Spielmodus übergeben
+  }
+
+  private initializeAndOpenGame(mode: string) {
+    this.gameService.initializeGame(this.selectedSize).subscribe(
+      () => {
+        const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
+        modalRef.componentInstance.mode = this.gameService.difficultyGetter !== 'None' ? 'PvB' : 'PvT';
+      },
+      error => console.error('Error initializing game:', error)
+    );
   }
 
   openScoreboard() {

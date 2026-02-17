@@ -16,7 +16,29 @@ export class ScoreboardComponent implements OnInit {
   constructor(public activeModal: NgbActiveModal) {}
 
   ngOnInit() {
-    this.gameRecords = this.gameService.getGameRecords();
+    // Refresh records from backend
+    this.gameService.refreshGameRecords().subscribe(
+      () => {
+        this.gameRecords = this.gameService.getGameRecords();
+      },
+      error => {
+        console.error('Error loading game records:', error);
+        // Fall back to cached records
+        this.gameRecords = this.gameService.getGameRecords();
+      }
+    );
+  }
+
+  clearScoreboard() {
+    if (confirm('Möchtest du wirklich alle Spielaufzeichnungen löschen?')) {
+      this.gameService.clearGameRecords().subscribe(
+        () => {
+          this.gameRecords = [];
+          console.log('Game records cleared');
+        },
+        error => console.error('Error clearing game records:', error)
+      );
+    }
   }
 
   closeModal() {

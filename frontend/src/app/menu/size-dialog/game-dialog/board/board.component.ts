@@ -1,9 +1,10 @@
-import { Component, inject, OnInit, HostListener, ElementRef } from '@angular/core';
+import { Component, inject, OnInit, HostListener, ElementRef, OnDestroy } from '@angular/core';
 import { GameService } from './services/game.service';
 import { MemoryCardComponent } from './memory-card/memory-card.component';
 import { CommonModule } from '@angular/common';
 import { TimerService } from './services/timer.service';
 import { GameDialogComponent } from '../game-dialog.component';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-board',
@@ -20,18 +21,32 @@ import { GameDialogComponent } from '../game-dialog.component';
   `,
   styleUrls: ['./board.component.css']
 })
-export class BoardComponent implements OnInit {
+export class BoardComponent implements OnInit, OnDestroy {
   cards: any[] = [];
   gridTemplateColumns: string = '';
   gridTemplateRows: string = '';
   timerService: TimerService = inject(TimerService);
   gameDialog: GameDialogComponent = inject(GameDialogComponent);
+  
+  private cardsSubscription: Subscription = new Subscription();
 
   constructor(private gameService: GameService, private elRef: ElementRef) { }
 
   ngOnInit() {
     this.cards = this.gameService.getCards();
     this.setGridTemplate();
+    
+    // Subscribe to card updates from service
+    this.cardsSubscription = this.gameService.cards$.subscribe(updatedCards => {
+      this.cards = updatedCards;
+      this.setGridTemplate();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.cardsSubscription) {
+      this.cardsSubscription.unsubscribe();
+    }
   }
 
   @HostListener('window:resize', ['$event'])
@@ -52,7 +67,7 @@ export class BoardComponent implements OnInit {
 
   private setGridTemplate() {
     const cardCount = this.cards.length;
-    const containerWidth = this.elRef.nativeElement.querySelector('.board').offsetWidth;
+    const containerWidth = this.elRef.nativeElement.querySelector('.board')?.offsetWidth || 800;
     const cardWidth = 100;
     let columns: number;
     let rows: number;
