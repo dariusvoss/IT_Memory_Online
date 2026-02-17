@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  memory-game-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: memory-game-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=False
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Optional: Add a frontend service if needed
+  # memory-game-frontend:
+  #   build:
+  #     context: ../frontend
+  #     dockerfile: Dockerfile
+  #   container_name: memory-game-frontend
+  #   ports:
+  #     - "4200:4200"
+  #   depends_on:
+  #     - memory-game-backend
+  #   environment:
+  #     - BACKEND_URL=http://memory-game-backend:8000
+
+networks:
+  default:
+    name: memory-game-network
