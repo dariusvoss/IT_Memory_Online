@@ -76,7 +76,11 @@ def flip_card(request: FlipCardRequest):
             "status": "success",
             "cards": game_service.get_cards(),
             "selected_cards_count": len(game_service.get_selected_cards()),
-            "match_result": result
+            "match_result": result,
+            "is_player_turn": game_service.is_player_turn,
+            "player_points": game_service.get_player_points(),
+            "bot_points": game_service.get_bot_points(),
+            "pairs_found": game_service.get_pairs_found()
         }
     except (ValueError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -111,7 +115,10 @@ def bot_move():
             "status": "success",
             "move": move,
             "cards": game_service.get_cards(),
-            "bot_points": game_service.get_bot_points()
+            "bot_points": game_service.get_bot_points(),
+            "player_points": game_service.get_player_points(),
+            "match_result": move.get('is_pair', False) if move else False,
+            "is_player_turn": game_service.is_player_turn
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

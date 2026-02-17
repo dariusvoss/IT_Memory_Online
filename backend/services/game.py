@@ -166,6 +166,9 @@ class GameService:
     
     def _check_match(self) -> bool:
         """Check if the two selected cards match"""
+        if not self.selected_cards or len(self.selected_cards) < 2:
+            return False
+        
         card1 = self.selected_cards[0]['card']
         card2 = self.selected_cards[1]['card']
         
@@ -188,12 +191,14 @@ class GameService:
                 idx = selected['index']
                 self.bot_ai.forget_card(idx)
         else:
-            # Cards don't match - will be flipped back by frontend
-            pass
+            # Cards don't match - flip them back
+            card1['flipped'] = False
+            card2['flipped'] = False
         
+        # Always clear selected cards
         self.selected_cards = []
         return is_pair
-    
+
     def reset_game(self) -> None:
         """Reset the game to initial state"""
         for card in self.cards:

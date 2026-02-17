@@ -25,6 +25,7 @@ export class GameService {
   private deckSize: string = '';
   private delay = 800;
   private visibleDelay = 500;
+  private lastFlipResponse: any = null;
   
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
   private gameRecords: any[] = [];
@@ -164,8 +165,14 @@ export class GameService {
     // Call backend
     this.http.post(`${this.apiUrl}/flip-card`, { card_id: cardIndex }).subscribe(
       (response: any) => {
+        // Store response for checkMatch
+        this.lastFlipResponse = response;
+        
         // Update local state from response
         this.cards = response.cards;
+        this.pairsFoundPlayer = response.player_points;
+        this.pairsFoundBot = response.bot_points;
+        this.isPlayerTurn = response.is_player_turn;
         this.cardsSubject.next(this.cards);
         
         // Check if two cards are selected
@@ -191,37 +198,47 @@ export class GameService {
    * This is called after backend processes the flip
    */
   private checkMatch(): void {
+    if (!this.lastFlipResponse) {
+      console.error('No flip response available');
+      return;
+    }
+    
+    // Use match result from backend, not local comparison
+    const isMatch = this.lastFlipResponse.match_result;
     const card1 = this.selectedCards[0];
     const card2 = this.selectedCards[1];
     
-    if (card1.id === card2.id) {
-      // Match - cards will stay flipped (backend marked them as matched)
+    if (isMatch) {
+      // Match - cards stay flipped (backend marked them as matched)
       this.pairsFound++;
-      
-      if (this.difficulty === 'None' || this.isPlayerTurn) {
-        this.pairsFoundPlayer++;
-      } else {
-        this.pairsFoundBot++;
-      }
-      
       this.selectedCards = [];
+      this.lastFlipResponse = null;
       
       setTimeout(() => {
         if (this.checkWin()) return;
+        
+        // If bot's turn after successful match
+        if (!this.isPlayerTurn && this.difficulty !== 'None') {
+          setTimeout(() => this.botMove(), this.delay);
+        }
       }, this.delay / 2);
-      
-      // If player's turn and next turn is bot's
-      if (!this.isPlayerTurn) {
-        setTimeout(() => this.botMove(), this.delay);
-      }
     } else {
-      // No match - cards will be flipped back by UI
-      this.selectedCards = [];
-      
-      // Switch turns for bot mode
-      if (this.difficulty !== 'None') {
-        this.switchTurn();
-      }
+      // No match - flip cards back after a delay
+      setTimeout(() => {
+        if (card1 && card2) {
+          card1.flipped = false;
+          card2.flipped = false;
+          this.cardsSubject.next([...this.cards]);
+        }
+        
+        this.selectedCards = [];
+        this.lastFlipResponse = null;
+        
+        // Switch turns for bot mode
+        if (this.difficulty !== 'None') {
+          this.switchTurn();
+        }
+      }, this.visibleDelay);
     }
   }
 
@@ -285,16 +302,15 @@ export class GameService {
    * Switch turn between player and bot
    */
   private switchTurn(): void {
-    setTimeout(() => {
-      this.isPlayerTurn = !this.isPlayerTurn;
-      
-      if (!this.isPlayerTurn && this.difficulty !== 'None') {
-        console.log('Bot ist am Zug!');
-        setTimeout(() => this.botMove(), this.delay);
-      } else {
-        console.log('Spieler ist am Zug!');
-      }
-    }, this.visibleDelay);
+    this.isPlayerTurn = !this.isPlayerTurn;
+    console.log('Switch turn. Player turn now: ', this.isPlayerTurn);
+    
+    if (!this.isPlayerTurn && this.difficulty !== 'None') {
+      console.log('Bot is taking a turn');
+      setTimeout(() => this.botMove(), this.delay);
+    } else {
+      console.log('Player is now playing');
+    }
   }
 
   //-------------------------------------------------------------------------------------//
@@ -319,10 +335,22 @@ export class GameService {
         
         console.log('Bot move:', response.move);
         
-        // Check for win condition after bot move
-        setTimeout(() => {
-          this.checkWin();
-        }, this.delay * 2);
+        // Check if bot found a match
+        if (response.match_result) {
+          console.log('Bot found a pair, bot goes again');
+          // Bot found a pair - bot goes again
+          setTimeout(() => {
+            if (this.checkWin()) return;
+            // Bot found a pair so goes again
+            setTimeout(() => this.botMove(), this.delay);
+          }, this.delay / 2);
+        } else {
+          console.log('Bot did not find a pair, switching to player');
+          // No match - switch back to player
+          setTimeout(() => {
+            this.switchTurn();
+          }, this.visibleDelay);
+        }
       },
       error => console.error('Error executing bot move:', error)
     );
