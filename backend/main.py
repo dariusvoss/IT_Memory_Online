@@ -80,7 +80,8 @@ def flip_card(request: FlipCardRequest):
             "is_player_turn": game_service.is_player_turn,
             "player_points": game_service.get_player_points(),
             "bot_points": game_service.get_bot_points(),
-            "pairs_found": game_service.get_pairs_found()
+            "pairs_found": game_service.get_pairs_found(),
+            "complete": game_service.check_win()
         }
     except (ValueError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e))

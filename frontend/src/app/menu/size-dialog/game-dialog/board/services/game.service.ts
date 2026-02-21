@@ -12,11 +12,12 @@ import { tap } from 'rxjs/operators';
 export class GameService {
   private http = inject(HttpClient);
   private apiUrl = 'http://localhost:8000/api/game';
-  
+
   isPlayerTurn: boolean = true;
   gameStarted: boolean = false;
   gameEnded: EventEmitter<void> = new EventEmitter<void>();
-  
+
+
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
@@ -26,15 +27,15 @@ export class GameService {
   private delay = 800;
   private visibleDelay = 500;
   private lastFlipResponse: any = null;
-  
+
   private cards: { id: number; image: string; flipped: boolean; matched: boolean }[] = [];
   private gameRecords: any[] = [];
   private selectedImages: string[] = [];
-  
+
   // Observable für UI Updates
   private cardsSubject = new BehaviorSubject<any[]>([]);
   public cards$ = this.cardsSubject.asObservable();
-  
+
   private gameStateSubject = new BehaviorSubject<any>(null);
   public gameState$ = this.gameStateSubject.asObservable();
 
@@ -97,18 +98,18 @@ export class GameService {
       tap((response: any) => {
         this.cards = response.cards;
         this.cardsSubject.next(this.cards);
-        
+
         // Extract selected images from cards for win condition
         const uniqueIds = new Set(this.cards.map((c: any) => c.id));
         this.selectedImages = Array.from(uniqueIds);
-        
+
         this.selectedCards = [];
         this.pairsFound = 0;
         this.pairsFoundPlayer = 0;
         this.pairsFoundBot = 0;
         this.gameStarted = true;
         this.isPlayerTurn = true;
-        
+
         console.log('Game initialized:', cardCount, 'cards');
       })
     );
@@ -125,7 +126,7 @@ export class GameService {
           card.matched = false;
         });
         this.cardsSubject.next(this.cards);
-        
+
         this.selectedCards = [];
         this.pairsFound = 0;
         this.pairsFoundPlayer = 0;
@@ -134,7 +135,7 @@ export class GameService {
         this.isPlayerTurn = true;
         this.timerService.resetTimer();
         this.difficulty = 'Leicht';
-        
+
         console.log('Game reset');
       })
     );
@@ -154,12 +155,13 @@ export class GameService {
    */
   flipCard(card: any): void {
     const cardIndex = this.cards.indexOf(card);
-    
+
     // Optimistic update - flip immediately
     if (this.selectedCards.length < 2 && !card.flipped && !card.matched) {
       card.flipped = true;
       this.selectedCards.push(card);
       this.cardsSubject.next([...this.cards]);
+      console.log('test');
     }
 
     // Call backend
@@ -167,18 +169,20 @@ export class GameService {
       (response: any) => {
         // Store response for checkMatch
         this.lastFlipResponse = response;
-        
+
         // Update local state from response
         this.cards = response.cards;
         this.pairsFoundPlayer = response.player_points;
         this.pairsFoundBot = response.bot_points;
         this.isPlayerTurn = response.is_player_turn;
         this.cardsSubject.next(this.cards);
-        
+
         // Check if two cards are selected
-        if (response.selected_cards_count === 2) {
+        if (response.selected_cards_count < 1) {
           setTimeout(() => this.checkMatch(), this.delay);
+          console.log('Two cards flipped, checking for match after delay');
         }
+        console.log('selectedCards', this.selectedCards.length,'Card flipped:', cardIndex, 'Response:', response);
       },
       error => {
         console.error('Error flipping card:', error);
@@ -202,21 +206,21 @@ export class GameService {
       console.error('No flip response available');
       return;
     }
-    
+    console.log('Checking match for selected cards:', this.selectedCards);
     // Use match result from backend, not local comparison
     const isMatch = this.lastFlipResponse.match_result;
     const card1 = this.selectedCards[0];
     const card2 = this.selectedCards[1];
-    
+
     if (isMatch) {
       // Match - cards stay flipped (backend marked them as matched)
       this.pairsFound++;
       this.selectedCards = [];
       this.lastFlipResponse = null;
-      
+
       setTimeout(() => {
         if (this.checkWin()) return;
-        
+
         // If bot's turn after successful match
         if (!this.isPlayerTurn && this.difficulty !== 'None') {
           setTimeout(() => this.botMove(), this.delay);
@@ -230,10 +234,10 @@ export class GameService {
           card2.flipped = false;
           this.cardsSubject.next([...this.cards]);
         }
-        
+
         this.selectedCards = [];
         this.lastFlipResponse = null;
-        
+
         // Switch turns for bot mode
         if (this.difficulty !== 'None') {
           this.switchTurn();
@@ -251,7 +255,7 @@ export class GameService {
         if (response.won) {
           this.timerService.stopTimer();
           const finTime = this.timerService.getFormattedTimer();
-          
+
           const record = {
             date: new Date().toLocaleString(),
             mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
@@ -261,7 +265,7 @@ export class GameService {
             rank: response.rank,
             time: response.time
           };
-          
+
           // Open finish dialog
           const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
           modalRef.componentInstance.time = finTime;
@@ -269,7 +273,7 @@ export class GameService {
           modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
           modalRef.componentInstance.botPoints = this.pairsFoundBot;
           modalRef.componentInstance.difficulty = this.difficulty;
-          
+
           if (this.difficulty !== 'None') {
             if (this.pairsFoundPlayer > this.pairsFoundBot) {
               modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast gewonnen!';
@@ -281,13 +285,13 @@ export class GameService {
           } else {
             modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
           }
-          
+
           // Save record
           this.http.post(`${this.apiUrl}/save-record`, record).subscribe(
             () => console.log('Record saved'),
             error => console.error('Error saving record:', error)
           );
-          
+
           this.resetGame().subscribe();
           this.gameEnded.emit();
           return true;
@@ -304,7 +308,7 @@ export class GameService {
   private switchTurn(): void {
     this.isPlayerTurn = !this.isPlayerTurn;
     console.log('Switch turn. Player turn now: ', this.isPlayerTurn);
-    
+
     if (!this.isPlayerTurn && this.difficulty !== 'None') {
       console.log('Bot is taking a turn');
       setTimeout(() => this.botMove(), this.delay);
@@ -325,16 +329,16 @@ export class GameService {
       this.isPlayerTurn = true;
       return;
     }
-    
+
     this.http.post(`${this.apiUrl}/bot-move`, {}).subscribe(
       (response: any) => {
         // Update game state from response
         this.cards = response.cards;
         this.cardsSubject.next(this.cards);
         this.pairsFoundBot = response.bot_points;
-        
+
         console.log('Bot move:', response.move);
-        
+
         // Check if bot found a match
         if (response.match_result) {
           console.log('Bot found a pair, bot goes again');
