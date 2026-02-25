@@ -11,7 +11,7 @@ import { tap } from 'rxjs/operators';
 })
 export class GameService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/game';
+  private apiUrl = 'http://memory.ipv64.de:8000/api/game';
 
   isPlayerTurn: boolean = true;
   gameStarted: boolean = false;
