@@ -6,13 +6,14 @@ import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component'
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
+import { environment } from '../../../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameService {
   private http = inject(HttpClient);
-  private sessionService = inject(SessionService);
+  private apiUrl = `${environment.apiUrl}/game`;
 
   isPlayerTurn: boolean = true;
   gameStarted: boolean = false;
@@ -112,7 +113,7 @@ export class GameService {
           const sessionData = response.data;
           this.sessionId = sessionData.session_id;
           this.timerService.setSessionId(this.sessionId);
-          
+
           this.cards = sessionData.cards || [];
           this.cardsSubject.next(this.cards);
 

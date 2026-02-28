@@ -1,0 +1,127 @@
+.game-mode-container {
+  width: 100%;
+}
+
+/* Mode Selection */
+.mode-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  gap: 3rem;
+  padding: 2rem;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;    /* untereinander */
+  gap: 2rem;
+  justify-content: center;
+  width: 100%;               /* optional: volle Breite */
+  max-width: 400px;          /* o. ä. */
+}
+
+.btn {
+  padding: 12px 30px;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+}
+
+.btn-secondary {
+  background-color: #2196F3;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #0b7dda;
+}
+
+.btn-tertiary {               /* neuer Style für Scoreboard */
+  background-color: #ff9800;
+  color: white;
+}
+
+.btn-tertiary:hover {
+  background-color: #e68900;
+}
+
+/* Menu Container */
+.menu-container {
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 10px 20px;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  z-index: 100;
+  transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+  background-color: #764ba2;
+}
+
+/* Loading Screen */
+.loading-container {
+  position: relative;
+}
+
+.loading-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  gap: 2rem;
+}
+
+.loading-screen h2 {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid rgba(255, 255, 255, 0.3);
+  border-top: 6px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-screen p {
+  font-size: 1.2rem;
+}

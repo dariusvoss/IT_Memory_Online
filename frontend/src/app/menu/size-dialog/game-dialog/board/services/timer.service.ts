@@ -2,15 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, interval } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { environment } from '../../../../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TimerService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/session';
-  private sessionId: string = '';
-  
+  private apiUrl = `${environment.apiUrl}/session';
+  private sessionId: string = '`;
+
   private secondsElapsed = 0;
   private timer$ = new BehaviorSubject<number>(this.secondsElapsed);
   private intervalSubscription: any;
@@ -27,7 +28,7 @@ export class TimerService {
   startTimer() {
     if (!this.intervalSubscription) {
       this.isTimerRunning = true;
-      
+
       // Notify backend
       if (this.sessionId) {
         this.http.post(`${this.apiUrl}/${this.sessionId}/timer/start`, {}).subscribe(
@@ -35,7 +36,7 @@ export class TimerService {
           error => console.error('Error starting backend timer:', error)
         );
       }
-      
+
       // Run local timer
       this.intervalSubscription = interval(1000)
         .pipe(map(() => ++this.secondsElapsed))
@@ -48,7 +49,7 @@ export class TimerService {
       this.isTimerRunning = false;
       this.intervalSubscription.unsubscribe();
       this.intervalSubscription = null;
-      
+
       // Notify backend
       if (this.sessionId) {
         this.http.post(`${this.apiUrl}/${this.sessionId}/timer/stop`, {}).subscribe(
@@ -63,6 +64,12 @@ export class TimerService {
     this.stopTimer();
     this.secondsElapsed = 0;
     this.timer$.next(this.secondsElapsed);
+
+    // Also notify backend
+    this.http.post(`${this.apiUrl}/reset`, {}).subscribe(
+      () => console.log('Backend timer reset'),
+      error => console.error('Error resetting backend timer:', error)
+    );
   }
 
   getTimer() {

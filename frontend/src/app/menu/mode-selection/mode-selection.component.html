@@ -1,0 +1,35 @@
+<div class="game-mode-container">
+  <!-- Mode Selection Screen -->
+  <div *ngIf="selectedMode === 'none'" class="mode-selection">
+
+    <div class="button-group">
+      <button class="btn btn-primary" (click)="selectSingleplayer()">
+        Singleplayer
+      </button>
+
+      <button class="btn btn-secondary" (click)="selectMultiplayer()">
+        Multiplayer
+      </button>
+
+      <button class="btn btn-tertiary" (click)="openScoreboard()">
+        Scoreboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Singleplayer: Show Menu -->
+  <div *ngIf="selectedMode === 'singleplayer'" class="menu-container">
+    <button class="back-button" (click)="goBack()">← Zurück</button>
+    <app-menu></app-menu>
+  </div>
+
+  <!-- Multiplayer: Loading Screen -->
+  <div *ngIf="selectedMode === 'multiplayer'" class="loading-container">
+    <button class="back-button" (click)="goBack()">← Zurück</button>
+    <div class="loading-screen">
+      <h2>LOADING...</h2>
+      <div class="spinner"></div>
+      <p>Suche nach Spielern...</p>
+    </div>
+  </div>
+</div>
