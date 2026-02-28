@@ -1,23 +1,24 @@
 import { Injectable, EventEmitter, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TimerService } from './timer.service';
+import { SessionService } from './session.service';
 import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { tap, map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
 })
 export class GameService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://memory.ipv64.de:8000/api/game';
+  private sessionService = inject(SessionService);
 
   isPlayerTurn: boolean = true;
   gameStarted: boolean = false;
   gameEnded: EventEmitter<void> = new EventEmitter<void>();
 
-
+  private sessionId: string = '';
   private selectedCards: any[] = [];
   private pairsFound = 0;
   private pairsFoundPlayer = 0;
@@ -41,7 +42,6 @@ export class GameService {
 
   constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService initialized');
-    this.loadGameRecords();
   }
 
 
@@ -63,11 +63,11 @@ export class GameService {
 
   public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
     this.difficulty = level;
-    return this.http.post(`${this.apiUrl}/set-difficulty?difficulty=${level}`, {}).pipe(
-      tap(response => {
-        console.log('Difficulty set to:', level);
-      })
-    );
+    // Difficulty is set when creating the session, not as separate API call
+    return new Observable(observer => {
+      observer.next({ success: true });
+      observer.complete();
+    });
   }
 
   private getSelectedSize(selectedSize: number): string {
@@ -91,26 +91,44 @@ export class GameService {
 
   /**
    * Initialize a new game with the specified card count
-   * Makes API call to backend and updates local state
+   * Creates a session and starts the game
    */
   initializeGame(cardCount: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/initialize`, { card_count: cardCount }).pipe(
+    // Determine game mode based on difficulty
+    let gameMode = 'singleplayer_time';
+    if (this.difficulty !== 'None') {
+      gameMode = 'singleplayer_ai';
+    }
+
+    // Create session with current settings
+    return this.sessionService.createSession(
+      ['player1'], // Player ID
+      this.difficulty,
+      cardCount,
+      gameMode
+    ).pipe(
       tap((response: any) => {
-        this.cards = response.cards;
-        this.cardsSubject.next(this.cards);
+        if (response.data) {
+          const sessionData = response.data;
+          this.sessionId = sessionData.session_id;
+          this.timerService.setSessionId(this.sessionId);
+          
+          this.cards = sessionData.cards || [];
+          this.cardsSubject.next(this.cards);
 
-        // Extract selected images from cards for win condition
-        const uniqueIds = new Set(this.cards.map((c: any) => c.id));
-        this.selectedImages = Array.from(uniqueIds);
+          // Extract selected images from cards for win condition
+          const uniqueIds = new Set(this.cards.map((c: any) => c.id));
+          this.selectedImages = Array.from(uniqueIds);
 
-        this.selectedCards = [];
-        this.pairsFound = 0;
-        this.pairsFoundPlayer = 0;
-        this.pairsFoundBot = 0;
-        this.gameStarted = true;
-        this.isPlayerTurn = true;
+          this.selectedCards = [];
+          this.pairsFound = 0;
+          this.pairsFoundPlayer = 0;
+          this.pairsFoundBot = 0;
+          this.gameStarted = true;
+          this.isPlayerTurn = true;
 
-        console.log('Game initialized:', cardCount, 'cards');
+          console.log('Game initialized with session:', sessionData.session_id);
+        }
       })
     );
   }
@@ -119,7 +137,7 @@ export class GameService {
    * Reset the game to initial state
    */
   resetGame(): Observable<any> {
-    return this.http.post(`${this.apiUrl}/reset`, {}).pipe(
+    return this.sessionService.resetSession().pipe(
       tap((response: any) => {
         this.cards.forEach(card => {
           card.flipped = false;
@@ -151,7 +169,7 @@ export class GameService {
 
   /**
    * Flip a card at the given index
-   * Makes API call to backend and updates local state
+   * Uses session service and handles response
    */
   flipCard(card: any): void {
     const cardIndex = this.cards.indexOf(card);
@@ -161,30 +179,51 @@ export class GameService {
       card.flipped = true;
       this.selectedCards.push(card);
       this.cardsSubject.next([...this.cards]);
-      console.log('test');
+    }
+
+    // Start game on first card flip
+    if (this.selectedCards.length === 1) {
+      this.sessionService.startGame().subscribe(
+        (response: any) => {
+          console.log('Game started successfully');
+          // Now start the timer after game is started (for no difficulty mode)
+          if (this.difficulty === 'None' && !this.timerService.isTimerRunning) {
+            this.timerService.startTimer();
+          }
+        },
+        (error: any) => {
+          console.error('Error starting game:', error);
+        }
+      );
     }
 
     // Call backend
-    this.http.post(`${this.apiUrl}/flip-card`, { card_id: cardIndex }).subscribe(
+    this.sessionService.flipCard(cardIndex).subscribe(
       (response: any) => {
         // Store response for checkMatch
         this.lastFlipResponse = response;
 
         // Update local state from response
-        this.cards = response.cards;
-        this.pairsFoundPlayer = response.player_points;
-        this.pairsFoundBot = response.bot_points;
-        this.isPlayerTurn = response.is_player_turn;
-        this.cardsSubject.next(this.cards);
+        if (response.cards) {
+          this.cards = response.cards;
+          this.cardsSubject.next(this.cards);
+        }
+
+        if (response.player_points) {
+          this.pairsFoundPlayer = response.player_points['player1'] || 0;
+        }
+        if (response.bot_points !== undefined) {
+          this.pairsFoundBot = response.bot_points;
+        }
 
         // Check if two cards are selected
-        if (response.selected_cards_count < 1) {
-          setTimeout(() => this.checkMatch(), this.delay);
+        if (response.selected_cards_count >= 2) {
+          setTimeout(() => this.checkMatch(response), this.delay);
           console.log('Two cards flipped, checking for match after delay');
         }
-        console.log('selectedCards', this.selectedCards.length,'Card flipped:', cardIndex, 'Response:', response);
+        console.log('Card flipped:', cardIndex, 'Response:', response);
       },
-      error => {
+      (error: any) => {
         console.error('Error flipping card:', error);
         // Revert optimistic update on error
         card.flipped = false;
@@ -199,16 +238,19 @@ export class GameService {
 
   /**
    * Check if the two selected cards match
-   * This is called after backend processes the flip
+   * Uses match result from backend response
    */
-  private checkMatch(): void {
-    if (!this.lastFlipResponse) {
+  private checkMatch(response?: any): void {
+    if (!response && !this.lastFlipResponse) {
       console.error('No flip response available');
       return;
     }
+
+    const flipResponse = response || this.lastFlipResponse;
     console.log('Checking match for selected cards:', this.selectedCards);
-    // Use match result from backend, not local comparison
-    const isMatch = this.lastFlipResponse.match_result;
+
+    // Use match result from backend
+    const isMatch = flipResponse.is_match;
     const card1 = this.selectedCards[0];
     const card2 = this.selectedCards[1];
 
@@ -219,11 +261,14 @@ export class GameService {
       this.lastFlipResponse = null;
 
       setTimeout(() => {
-        if (this.checkWin()) return;
+        // Check if game is won after a successful match
+        this.checkWin();
 
-        // If bot's turn after successful match
-        if (!this.isPlayerTurn && this.difficulty !== 'None') {
-          setTimeout(() => this.botMove(), this.delay);
+        if (this.gameStarted) {
+          // If bot's turn after successful match
+          if (!flipResponse.is_player_turn && this.difficulty !== 'None') {
+            setTimeout(() => this.botMove(), this.delay);
+          }
         }
       }, this.delay / 2);
     } else {
@@ -248,9 +293,10 @@ export class GameService {
 
   /**
    * Check if the game is won
+   * Sends request to backend and handles win condition
    */
-  checkWin(): boolean {
-    this.http.post(`${this.apiUrl}/check-win`, {}).subscribe(
+  checkWin(): void {
+    this.sessionService.checkWin().subscribe(
       (response: any) => {
         if (response.won) {
           this.timerService.stopTimer();
@@ -262,14 +308,14 @@ export class GameService {
             difficulty_level: this.difficulty !== 'None' ? this.difficulty : '-',
             deck_size: this.getSelectedSize(this.cards.length),
             points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
-            rank: response.rank,
-            time: response.time
+            rank: response.rank || '-',
+            time: response.time || finTime
           };
 
           // Open finish dialog
           const modalRef = this.modalService.open(FinishDialogComponent, { centered: true });
           modalRef.componentInstance.time = finTime;
-          modalRef.componentInstance.rank = response.rank;
+          modalRef.componentInstance.rank = response.rank || '-';
           modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
           modalRef.componentInstance.botPoints = this.pairsFoundBot;
           modalRef.componentInstance.difficulty = this.difficulty;
@@ -286,20 +332,17 @@ export class GameService {
             modalRef.componentInstance.message = '🎉 Glückwunsch! Du hast alle Paare gefunden!';
           }
 
-          // Save record
-          this.http.post(`${this.apiUrl}/save-record`, record).subscribe(
-            () => console.log('Record saved'),
-            error => console.error('Error saving record:', error)
-          );
+          // Save record (optional - implement if needed)
+          // this.http.post(`${this.apiUrl}/save-record`, record).subscribe();
 
           this.resetGame().subscribe();
           this.gameEnded.emit();
-          return true;
         }
-        return false;
+      },
+      (error: any) => {
+        console.error('Error checking win:', error);
       }
     );
-    return false;
   }
 
   /**
@@ -330,21 +373,26 @@ export class GameService {
       return;
     }
 
-    this.http.post(`${this.apiUrl}/bot-move`, {}).subscribe(
+    this.sessionService.botMove().subscribe(
       (response: any) => {
         // Update game state from response
-        this.cards = response.cards;
-        this.cardsSubject.next(this.cards);
-        this.pairsFoundBot = response.bot_points;
+        if (response.cards) {
+          this.cards = response.cards;
+          this.cardsSubject.next(this.cards);
+        }
 
-        console.log('Bot move:', response.move);
+        if (response.player_points) {
+          this.pairsFoundBot = response.player_points['bot'] || response.player_points['player2'] || 0;
+        }
+
+        console.log('Bot move executed');
 
         // Check if bot found a match
-        if (response.match_result) {
+        if (response.is_match) {
           console.log('Bot found a pair, bot goes again');
           // Bot found a pair - bot goes again
           setTimeout(() => {
-            if (this.checkWin()) return;
+            this.checkWin();
             // Bot found a pair so goes again
             setTimeout(() => this.botMove(), this.delay);
           }, this.delay / 2);
@@ -356,7 +404,7 @@ export class GameService {
           }, this.visibleDelay);
         }
       },
-      error => console.error('Error executing bot move:', error)
+      (error: any) => console.error('Error executing bot move:', error)
     );
   }
 
@@ -366,40 +414,34 @@ export class GameService {
 
   /**
    * Load game records from backend
+   * TODO: Implement using new analysis endpoint
    */
   private loadGameRecords(): void {
-    this.http.get(`${this.apiUrl}/records`).subscribe(
-      (response: any) => {
-        this.gameRecords = response.records || [];
-        console.log('Game records loaded:', this.gameRecords.length);
-      },
-      error => {
-        console.error('Error loading game records:', error);
-        this.gameRecords = [];
-      }
-    );
+    // Records functionality to be integrated with new backend analysis endpoint
+    this.gameRecords = [];
+    console.log('Game records to be loaded from backend analysis');
   }
 
   /**
    * Request to load game records (for manual refresh)
    */
   refreshGameRecords(): Observable<any> {
-    return this.http.get(`${this.apiUrl}/records`).pipe(
-      tap((response: any) => {
-        this.gameRecords = response.records || [];
-      })
-    );
+    return new Observable(observer => {
+      // TODO: Implement using session analysis endpoint
+      observer.next({ records: [] });
+      observer.complete();
+    });
   }
 
   /**
    * Clear all game records
    */
   clearGameRecords(): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/records`).pipe(
-      tap((): void => {
-        this.gameRecords = [];
-        console.log('Game records cleared');
-      })
-    );
+    return new Observable(observer => {
+      this.gameRecords = [];
+      console.log('Game records cleared');
+      observer.next({ success: true });
+      observer.complete();
+    });
   }
 }

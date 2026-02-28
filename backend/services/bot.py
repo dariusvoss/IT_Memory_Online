@@ -94,3 +94,67 @@ class BotAI:
             'max_memory': self._get_max_memory_size(),
             'memory': dict(self.memory)
         }
+    
+    def decide_move(self, available_cards: List[Tuple[int, dict]]) -> Tuple[int, int]:
+        """
+        Decide which two cards to flip based on difficulty level.
+        
+        Args:
+            available_cards: List of (index, card_dict) tuples for available cards
+            
+        Returns:
+            Tuple of (first_card_index, second_card_index)
+        """
+        if self.difficulty == 'Leicht':
+            return self._decide_random_move(available_cards)
+        else:  # 'Mittel' or 'Schwer'
+            return self._decide_memory_move(available_cards)
+    
+    def _decide_random_move(self, available_cards: List[Tuple[int, dict]]) -> Tuple[int, int]:
+        """
+        Decide random move for 'Leicht' difficulty.
+        
+        Args:
+            available_cards: List of (index, card) tuples
+            
+        Returns:
+            Tuple of (first_index, second_index)
+        """
+        # First card (random)
+        first_idx, _ = random.choice(available_cards)
+        
+        # Second card (remove first from available)
+        remaining = [c for c in available_cards if c[0] != first_idx]
+        if not remaining:
+            return (first_idx, -1)  # Only one card available
+        
+        second_idx, _ = random.choice(remaining)
+        
+        return (first_idx, second_idx)
+    
+    def _decide_memory_move(self, available_cards: List[Tuple[int, dict]]) -> Tuple[int, int]:
+        """
+        Decide move using memory for 'Mittel' and 'Schwer' difficulties.
+        
+        First tries to find a known pair, falls back to random.
+        
+        Args:
+            available_cards: List of (index, card) tuples
+            
+        Returns:
+            Tuple of (first_index, second_index)
+        """
+        # Try to find a known matching pair
+        pair = self.find_known_pair()
+        
+        if pair:
+            first_idx, second_idx = pair
+            available_indices = [idx for idx, _ in available_cards]
+            
+            # Check if both cards of the pair are still available
+            if first_idx in available_indices and second_idx in available_indices:
+                return (first_idx, second_idx)
+        
+        # Fall back to random move if no known pair found
+        return self._decide_random_move(available_cards)
+

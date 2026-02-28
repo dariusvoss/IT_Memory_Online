@@ -6,7 +6,7 @@ Supports singleplayer and multiplayer games modes.
 This is the unified game logic module that combines all game mechanics.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import uuid
@@ -168,7 +168,7 @@ class GameSession:
         
         # ==================== Cards & Game Logic ====================
         self.cards: List[Card] = []
-        self.selected_cards: List[Card] = []
+        self.selected_cards: List[Tuple[int, Card]] = []  # Store (card_index, card) tuples
         self.matched_pairs: List[MatchedPair] = []
         self.move_history: List[Move] = []
         
@@ -201,8 +201,16 @@ class GameSession:
         if self.board_size not in [16, 36, 64]:
             raise ValueError(f"Invalid board size: {self.board_size}. Must be 16, 36, or 64.")
         
+        # Validate that we have enough card images
+        required_images = self.board_size // 2
+        if len(CARD_IMAGES) < required_images:
+            raise ValueError(
+                f"Insufficient card images: need {required_images} unique images for board size {self.board_size}, "
+                f"but only {len(CARD_IMAGES)} are configured."
+            )
+        
         # Select images for this session
-        self.selected_images = CARD_IMAGES[:self.board_size // 2]
+        self.selected_images = CARD_IMAGES[:required_images]
         
         # Create cards (two of each image)
         self.cards = []
@@ -223,10 +231,6 @@ class GameSession:
         # Initialize bot if needed
         if self.bot_ai:
             self.bot_ai.initialize(self.board_size)
-        
-        # Mark game as started
-        self.status = GameStatus.ACTIVE
-        self.started_at = datetime.now()
     
     def shuffle_cards(self) -> None:
         """Shuffle cards using Fisher-Yates algorithm"""
@@ -268,7 +272,8 @@ class GameSession:
         
         # Flip the card
         card.flipped = True
-        self.selected_cards.append(card)
+        # Store card with its index for later reference in check_match
+        self.selected_cards.append((card_index, card))
         
         # Remember card for bot (only for 'Schwer' difficulty when player flips cards)
         if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI:
@@ -288,14 +293,12 @@ class GameSession:
         if len(self.selected_cards) < 2:
             return False, []
         
-        card1 = self.selected_cards[0]
-        card2 = self.selected_cards[1]
+        # Extract card index and card from tuples
+        idx1, card1 = self.selected_cards[0]
+        idx2, card2 = self.selected_cards[1]
         
         # Determine if cards match
         is_pair = card1.id == card2.id
-        
-        pos1 = self.cards.index(card1)
-        pos2 = self.cards.index(card2)
         
         if is_pair:
             # Mark cards as matched
@@ -309,7 +312,7 @@ class GameSession:
             # Store matched pair record
             self.matched_pairs.append(
                 MatchedPair(
-                    card_indices=(pos1, pos2),
+                    card_indices=(idx1, idx2),
                     matched_by=self.current_player_turn,
                     match_time=datetime.now()
                 )
@@ -318,14 +321,14 @@ class GameSession:
             # Record successful move
             self.record_move(
                 self.current_player_turn,
-                [pos1, pos2],
-                is_pair=True
+                [idx1, idx2],
+                is_match=True
             )
             
             # Remove cards from bot memory
             if self.bot_ai:
-                self.bot_ai.forget_card(pos1)
-                self.bot_ai.forget_card(pos2)
+                self.bot_ai.forget_card(idx1)
+                self.bot_ai.forget_card(idx2)
         else:
             # Flip cards back if no match
             card1.flipped = False
@@ -334,18 +337,18 @@ class GameSession:
             # Record unsuccessful move
             self.record_move(
                 self.current_player_turn,
-                [pos1, pos2],
-                is_pair=False
+                [idx1, idx2],
+                is_match=False
             )
             
-            # Switch turn on mismatch (if multiplayer or AI mode)
-            if self.game_mode == GameMode.SINGLEPLAYER_AI:
+            # Switch turn on mismatch (except in singleplayer time mode)
+            if self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
                 self.next_turn()
         
         # Clear selected cards
         self.selected_cards = []
         
-        return is_pair, [pos1, pos2]
+        return is_pair, [idx1, idx2]
     
     def next_turn(self) -> None:
         """
@@ -379,7 +382,7 @@ class GameSession:
     def bot_move(self) -> Optional[Dict]:
         """
         Execute bot's move based on difficulty level.
-        Each GameSession has its own bot instance with its own memory.
+        Bot decides which cards to flip, then GameSession executes the move.
         
         Returns:
             Dictionary with move information or None if invalid state
@@ -399,68 +402,33 @@ class GameSession:
         if not available_cards or len(available_cards) < 2:
             return None
         
-        if self.difficulty == 'Leicht':
-            return self._random_bot_move(available_cards)
-        else:  # 'Mittel' or 'Schwer'
-            return self._bot_memory_move(available_cards)
-    
-    def _random_bot_move(self, available_cards: List[Tuple]) -> Dict:
-        """Bot makes random moves"""
-        # First card
-        first_idx, first_card = random.choice(available_cards)
+        # Get bot's decision (which cards to flip)
+        first_idx, second_idx = self.bot_ai.decide_move(available_cards)
+        
+        if second_idx == -1:
+            return None  # Not enough cards available
+        
+        # Execute the move
         self.flip_card(self.current_player_turn, first_idx)
+        first_card = self.cards[first_idx]
+        
         # Bot remembers its own cards
-        if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
+        if self.difficulty in ['Mittel', 'Schwer']:
             self.bot_ai.remember_card(first_idx, first_card.id, seen_by='bot')
         
-        # Second card (remove first from available)
-        remaining = [c for c in available_cards if c[0] != first_idx]
-        if not remaining:
-            return {'first_card': first_idx, 'second_card': None, 'type': 'random', 'is_pair': False}
-        
-        second_idx, second_card = random.choice(remaining)
         self.flip_card(self.current_player_turn, second_idx)
+        second_card = self.cards[second_idx]
+        
         # Bot remembers its own cards
-        if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
+        if self.difficulty in ['Mittel', 'Schwer']:
             self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
         
         return {
-            'type': 'random',
+            'type': 'bot_move',
             'first_card': first_idx,
             'second_card': second_idx,
             'is_pair': first_card.id == second_card.id
         }
-    
-    def _bot_memory_move(self, available_cards: List[Tuple]) -> Dict:
-        """Bot uses memory to find pairs (for Mittel and Schwer difficulties)"""
-        # Check if bot knows a pair
-        pair = self.bot_ai.find_known_pair()
-        
-        if pair:
-            first_idx, second_idx = pair
-            # Check if cards are still available
-            available_indices = [idx for idx, _ in available_cards]
-            
-            if first_idx in available_indices and second_idx in available_indices:
-                self.flip_card(self.current_player_turn, first_idx)
-                self.flip_card(self.current_player_turn, second_idx)
-                
-                # Bot remembers its own cards
-                first_card = self.cards[first_idx]
-                second_card = self.cards[second_idx]
-                if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
-                    self.bot_ai.remember_card(first_idx, first_card.id, seen_by='bot')
-                    self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
-                
-                return {
-                    'type': 'memory',
-                    'first_card': first_idx,
-                    'second_card': second_idx,
-                    'is_pair': first_card.id == second_card.id
-                }
-        
-        # Fall back to random move if no known pair
-        return self._random_bot_move(available_cards)
     
     # ==================== Scoring & Ranking ====================
     
@@ -521,6 +489,10 @@ class GameSession:
         Returns:
             True if game should end, False otherwise
         """
+        # Guard against uninitialized game (no cards yet)
+        if not self.cards:
+            return False
+        
         all_matched = all(card.matched for card in self.cards)
         return all_matched or self.time_expired
     
@@ -563,6 +535,60 @@ class GameSession:
             )
             self.final_results.append(result)
     
+    def start_game(self) -> None:
+        """
+        Start the game session.
+        Changes status from WAITING to ACTIVE and sets start time.
+        """
+        if self.status != GameStatus.WAITING:
+            raise ValueError(f"Cannot start game with status: {self.status}")
+        
+        self.status = GameStatus.ACTIVE
+        self.started_at = datetime.now()
+    
+    def reset_game(self) -> None:
+        """
+        Reset the game to initial state.
+        Re-initializes cards and clears game progress.
+        """
+        self.status = GameStatus.WAITING
+        self.finished = False
+        self.started_at = None
+        self.ended_at = None
+        self.winner = None
+        self.final_results = []
+        self.elapsed_time = 0
+        self.time_expired = False
+        
+        # Reset game state
+        self.initialize_game()
+        
+        # Reset bot memory if applicable
+        if self.bot_ai:
+            self.bot_ai.clear_memory()
+    
+    def start_timer(self) -> None:
+        """Start the game timer"""
+        if self.status != GameStatus.ACTIVE:
+            raise ValueError(f"Cannot start timer with game status: {self.status}")
+        if self.started_at is None:
+            self.started_at = datetime.now()
+    
+    def stop_timer(self) -> None:
+        """Stop the game timer and calculate elapsed time"""
+        if self.started_at is not None:
+            self.elapsed_time = int((datetime.now() - self.started_at).total_seconds())
+    
+    def check_win(self) -> bool:
+        """
+        Check if the game is won (alias for check_win_condition).
+        Returns True if all cards are matched or time expired.
+        """
+        if self.check_win_condition():
+            self.finish_game()
+            return True
+        return False
+
     # ==================== Data Access Methods ====================
     
     def get_board_size_text(self) -> str:
@@ -652,114 +678,3 @@ class GameSession:
             }
             for move in self.move_history
         ]
-
-
-class GameSessionManager:
-    """
-    Manages all active game sessions.
-    Acts as a registry/factory for GameSession instances.
-    
-    In future, this could be extended to:
-    - Persist sessions to database
-    - Handle session cleanup
-    - Load sessions from storage
-    """
-    
-    def __init__(self):
-        self.sessions: Dict[str, GameSession] = {}
-    
-    def create_session(
-        self,
-        player_ids: List[str],
-        difficulty: str,
-        board_size: int,
-        game_mode: GameMode = GameMode.SINGLEPLAYER_TIME
-    ) -> GameSession:
-        """
-        Create and register a new game session.
-        
-        Args:
-            player_ids: List of player IDs participating
-            difficulty: Difficulty level ('Leicht', 'Mittel', 'Schwer', 'None')
-            board_size: Number of cards (16, 36, or 64)
-            game_mode: Type of game (SINGLEPLAYER_TIME, SINGLEPLAYER_AI, MULTIPLAYER)
-            
-        Returns:
-            The newly created GameSession instance
-        """
-        session_id = str(uuid.uuid4())
-        session = GameSession(
-            session_id=session_id,
-            player_ids=player_ids,
-            difficulty=difficulty,
-            board_size=board_size,
-            game_mode=game_mode
-        )
-        self.sessions[session_id] = session
-        return session
-    
-    def get_session(self, session_id: str) -> Optional[GameSession]:
-        """
-        Retrieve a session by ID.
-        
-        Args:
-            session_id: ID of session to retrieve
-            
-        Returns:
-            GameSession if found, None otherwise
-        """
-        return self.sessions.get(session_id)
-    
-    def close_session(self, session_id: str) -> None:
-        """
-        Close and remove a session (cleanup).
-        
-        Args:
-            session_id: ID of session to close
-        """
-        if session_id in self.sessions:
-            session = self.sessions[session_id]
-            session.status = GameStatus.ABANDONED
-            del self.sessions[session_id]
-    
-    def get_player_sessions(self, player_id: str) -> List[GameSession]:
-        """
-        Get all active sessions for a specific player.
-        Useful for showing a player's active games.
-        
-        Args:
-            player_id: ID of player
-            
-        Returns:
-            List of GameSession instances the player is in
-        """
-        return [
-            session for session in self.sessions.values()
-            if player_id in session.player_ids
-        ]
-    
-    def get_all_sessions(self) -> List[GameSession]:
-        """
-        Get all active sessions (for debugging/monitoring).
-        
-        Returns:
-            List of all GameSession instances
-        """
-        return list(self.sessions.values())
-    
-    def cleanup_finished_sessions(self) -> int:
-        """
-        Remove all finished sessions from memory.
-        Can be called periodically in production.
-        
-        Returns:
-            Number of sessions cleaned up
-        """
-        finished_ids = [
-            sid for sid, session in self.sessions.items()
-            if session.finished
-        ]
-        for sid in finished_ids:
-            del self.sessions[sid]
-        return len(finished_ids)
-

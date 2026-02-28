@@ -21,7 +21,7 @@ export class ScoreboardComponent implements OnInit {
       () => {
         this.gameRecords = this.gameService.getGameRecords();
       },
-      error => {
+      (error: any) => {
         console.error('Error loading game records:', error);
         // Fall back to cached records
         this.gameRecords = this.gameService.getGameRecords();
@@ -36,7 +36,7 @@ export class ScoreboardComponent implements OnInit {
           this.gameRecords = [];
           console.log('Game records cleared');
         },
-        error => console.error('Error clearing game records:', error)
+        (error: any) => console.error('Error clearing game records:', error)
       );
     }
   }

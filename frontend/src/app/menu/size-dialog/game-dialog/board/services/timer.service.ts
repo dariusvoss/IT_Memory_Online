@@ -8,7 +8,8 @@ import { map } from 'rxjs/operators';
 })
 export class TimerService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8000/api/game';
+  private apiUrl = 'http://localhost:8000/api/session';
+  private sessionId: string = '';
   
   private secondsElapsed = 0;
   private timer$ = new BehaviorSubject<number>(this.secondsElapsed);
@@ -16,18 +17,24 @@ export class TimerService {
   isTimerRunning = false;
 
   constructor() {
-    console.log('TimerService');
+    console.log('TimerService initialized');
+  }
+
+  setSessionId(sessionId: string): void {
+    this.sessionId = sessionId;
   }
 
   startTimer() {
     if (!this.intervalSubscription) {
       this.isTimerRunning = true;
       
-      // Also notify backend
-      this.http.post(`${this.apiUrl}/start-timer`, {}).subscribe(
-        () => console.log('Backend timer started'),
-        error => console.error('Error starting backend timer:', error)
-      );
+      // Notify backend
+      if (this.sessionId) {
+        this.http.post(`${this.apiUrl}/${this.sessionId}/timer/start`, {}).subscribe(
+          () => console.log('Backend timer started'),
+          error => console.error('Error starting backend timer:', error)
+        );
+      }
       
       // Run local timer
       this.intervalSubscription = interval(1000)
@@ -42,11 +49,13 @@ export class TimerService {
       this.intervalSubscription.unsubscribe();
       this.intervalSubscription = null;
       
-      // Also notify backend
-      this.http.post(`${this.apiUrl}/stop-timer`, {}).subscribe(
-        () => console.log('Backend timer stopped'),
-        error => console.error('Error stopping backend timer:', error)
-      );
+      // Notify backend
+      if (this.sessionId) {
+        this.http.post(`${this.apiUrl}/${this.sessionId}/timer/stop`, {}).subscribe(
+          () => console.log('Backend timer stopped'),
+          error => console.error('Error stopping backend timer:', error)
+        );
+      }
     }
   }
 
@@ -54,12 +63,6 @@ export class TimerService {
     this.stopTimer();
     this.secondsElapsed = 0;
     this.timer$.next(this.secondsElapsed);
-    
-    // Also notify backend
-    this.http.post(`${this.apiUrl}/reset`, {}).subscribe(
-      () => console.log('Backend timer reset'),
-      error => console.error('Error resetting backend timer:', error)
-    );
   }
 
   getTimer() {

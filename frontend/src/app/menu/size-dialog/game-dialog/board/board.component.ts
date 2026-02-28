@@ -55,10 +55,6 @@ export class BoardComponent implements OnInit, OnDestroy {
   }
 
   onCardClick(card: any) {
-    if (this.gameService.difficultyGetter === 'None' && !this.timerService.isTimerRunning) {
-      this.timerService.startTimer();
-      this.gameDialog.currentImage = '../assets/icons/Stop.png';
-    }
     // Ist der Spieler nicht am Zug, wird nichts gemacht
     if (this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
       this.gameService.flipCard(card);
