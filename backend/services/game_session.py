@@ -2,26 +2,71 @@
 Game Session Management Module
 
 Handles the state and logic for individual game sessions.
-Supports singleplayer, multiplayer, and AI game modes.
+Supports singleplayer and multiplayer games modes.
+This is the unified game logic module that combines all game mechanics.
 """
 
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import uuid
+import json
+import os
+import random
 from dataclasses import dataclass, field
+from services.bot import BotAI
+
+# ==================== Card Images List ====================
+
+CARD_IMAGES = [
+    'assets/images-small/Memory_Card_01_Default.webp',
+    'assets/images-small/Memory_Card_02_RTF_02.webp',
+    'assets/images-small/Memory_Card_03_Application_Window.webp',
+    'assets/images-small/Memory_Card_04_Folder_Opened.webp',
+    'assets/images-small/Memory_Card_05_Floppy_Disk.webp',
+    'assets/images-small/Memory_Card_06_Removable_Media.webp',
+    'assets/images-small/Memory_Card_07_Optical_Drive.webp',
+    'assets/images-small/Memory_Card_08_Chip.webp',
+    'assets/images-small/Memory_Card_09_Entire_Network.webp',
+    'assets/images-small/Memory_Card_10_My_Computer.webp',
+    'assets/images-small/Memory_Card_11_Printer.webp',
+    'assets/images-small/Memory_Card_12_Start_Menu_Programs.webp',
+    'assets/images-small/Memory_Card_13_Recent_Documents.webp',
+    'assets/images-small/Memory_Card_14_Control_Panel.webp',
+    'assets/images-small/Memory_Card_15_Search.webp',
+    'assets/images-small/Memory_Card_16_Help_and_Support.webp',
+    'assets/images-small/Memory_Card_17_Run.webp',
+    'assets/images-small/Memory_Card_18_2_Hibernate.webp',
+    'assets/images-small/Memory_Card_19_Sharing_Hand.webp',
+    'assets/images-small/Memory_Card_20_Recycle_Bin(full).webp',
+    'assets/images-small/Memory_Card_21_Administrative_Tools.webp',
+    'assets/images-small/Memory_Card_22_Audio_CD.webp',
+    'assets/images-small/Memory_Card_23_Add.webp',
+    'assets/images-small/Memory_Card_24_Favorites.webp',
+    'assets/images-small/Memory_Card_25_Logout.webp',
+    'assets/images-small/Memory_Card_26_Windows_Update.webp',
+    'assets/images-small/Memory_Card_27_Padlock.webp',
+    'assets/images-small/Memory_Card_28_Delete.webp',
+    'assets/images-small/Memory_Card_29_CAB.webp',
+    'assets/images-small/Memory_Card_30_BAT.webp',
+    'assets/images-small/Memory_Card_31_Font.webp',
+    'assets/images-small/Memory_Card_32_TrueType2.webp'
+]
 
 
 class GameStatus(str, Enum):
     """Current status of a game session"""
+    WAITING = "waiting"
     ACTIVE = "active"
     PAUSED = "paused"
     FINISHED = "finished"
+    ABANDONED = "abandoned"
 
 
 class GameMode(str, Enum):
     """Type of game being played"""
-    SINGLEPLAYER = "singleplayer"
+    SINGLEPLAYER_TIME = "singleplayer_time"  # Player vs. Time (no bot)
+    SINGLEPLAYER_AI = "singleplayer_ai"      # Player vs. Bot
     MULTIPLAYER = "multiplayer"
 
 
@@ -61,6 +106,7 @@ class PlayerResult:
     is_winner: bool
     moves_count: int
     time_spent: int
+    rank: Optional[str] = None  # For time-based ranking
 
 
 @dataclass
@@ -75,8 +121,14 @@ class BotState:
 
 class GameSession:
     """
+    Unified game session management combining all game logic.
+    
     Manages a complete game session with full state management.
-    Can handle singleplayer and multiplayer.
+    - Handles card initialization, shuffling, and matching
+    - Manages player turns and scoring
+    - Integrates bot AI for single-player games
+    - Tracks move history for replays
+    - Calculates rankings based on time
     
     This is the authoritative state holder for a game - all game logic
     validation and decisions happen here.
@@ -88,7 +140,7 @@ class GameSession:
         player_ids: List[str],
         difficulty: str,
         board_size: int,
-        game_mode: GameMode = GameMode.SINGLEPLAYER
+        game_mode: GameMode = GameMode.SINGLEPLAYER_TIME
     ):
         # ==================== Session Management ====================
         self.session_id = session_id
@@ -106,9 +158,10 @@ class GameSession:
         self.game_mode = game_mode
         self.difficulty = difficulty
         self.board_size = board_size
+        self.selected_images: List[str] = []  # Selected card images for this session
         
         # ==================== Game State ====================
-        self.status = GameStatus.ACTIVE
+        self.status = GameStatus.WAITING
         self.finished = False
         self.winner: Optional[str] = None
         self.final_results: List[PlayerResult] = []
@@ -121,7 +174,14 @@ class GameSession:
         
         # ==================== Scoring ====================
         self.player_points: Dict[str, int] = {pid: 0 for pid in player_ids}
-        self.bot_states: Dict[str, BotState] = {}
+        self.pairs_found = 0
+        
+        # ==================== Bot Integration ====================
+        self.bot_ai: Optional[BotAI] = None
+        if game_mode == GameMode.SINGLEPLAYER_AI:
+            # Create bot instance for this session
+            self.bot_ai = BotAI()
+            self.bot_ai.set_difficulty(difficulty)
         
         # ==================== Timing ====================
         self.elapsed_time = 0
@@ -131,19 +191,50 @@ class GameSession:
         # ==================== Metadata ====================
         self.metadata: Dict[str, any] = {}
     
-    # ==================== Core Game Methods ====================
+    # ==================== Card Initialization ====================
     
-    def start_game(self, cards: List[Card]) -> None:
+    def initialize_game(self) -> None:
         """
-        Initialize and start the game session.
+        Initialize game with specified board size.
+        Creates and shuffles card deck.
+        """
+        if self.board_size not in [16, 36, 64]:
+            raise ValueError(f"Invalid board size: {self.board_size}. Must be 16, 36, or 64.")
         
-        Args:
-            cards: List of Card objects to set up on the board
-        """
-        self.started_at = datetime.now()
+        # Select images for this session
+        self.selected_images = CARD_IMAGES[:self.board_size // 2]
+        
+        # Create cards (two of each image)
+        self.cards = []
+        for index, image in enumerate(self.selected_images):
+            self.cards.append(Card(id=index, image=image, position=len(self.cards)))
+            self.cards.append(Card(id=index, image=image, position=len(self.cards)))
+        
+        # Shuffle cards
+        self.shuffle_cards()
+        
+        # Reset game state
+        self.selected_cards = []
+        self.pairs_found = 0
+        self.player_points = {pid: 0 for pid in self.player_ids}
+        self.move_history = []
+        self.matched_pairs = []
+        
+        # Initialize bot if needed
+        if self.bot_ai:
+            self.bot_ai.initialize(self.board_size)
+        
+        # Mark game as started
         self.status = GameStatus.ACTIVE
-        self.cards = cards
-        self.elapsed_time = 0
+        self.started_at = datetime.now()
+    
+    def shuffle_cards(self) -> None:
+        """Shuffle cards using Fisher-Yates algorithm"""
+        for i in range(len(self.cards) - 1, 0, -1):
+            j = random.randint(0, i)
+            self.cards[i], self.cards[j] = self.cards[j], self.cards[i]
+    
+    # ==================== Core Game Methods ====================
     
     def flip_card(self, player_id: str, card_index: int) -> bool:
         """
@@ -179,6 +270,11 @@ class GameSession:
         card.flipped = True
         self.selected_cards.append(card)
         
+        # Remember card for bot (only for 'Schwer' difficulty when player flips cards)
+        if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI:
+            if self.difficulty == 'Schwer':  # Only remember player's cards on hard difficulty
+                self.bot_ai.remember_card(card_index, card.id, seen_by='player')
+        
         return True
     
     def check_match(self) -> Tuple[bool, List[int]]:
@@ -207,6 +303,7 @@ class GameSession:
             card2.matched = True
             
             # Award points to current player
+            self.pairs_found += 1
             self.player_points[self.current_player_turn] += 1
             
             # Store matched pair record
@@ -224,6 +321,11 @@ class GameSession:
                 [pos1, pos2],
                 is_pair=True
             )
+            
+            # Remove cards from bot memory
+            if self.bot_ai:
+                self.bot_ai.forget_card(pos1)
+                self.bot_ai.forget_card(pos2)
         else:
             # Flip cards back if no match
             card1.flipped = False
@@ -236,8 +338,8 @@ class GameSession:
                 is_pair=False
             )
             
-            # Switch turn on mismatch (for multiplayer or single-player with turns)
-            if len(self.player_ids) > 1:
+            # Switch turn on mismatch (if multiplayer or AI mode)
+            if self.game_mode == GameMode.SINGLEPLAYER_AI:
                 self.next_turn()
         
         # Clear selected cards
@@ -272,21 +374,149 @@ class GameSession:
         )
         self.move_history.append(move)
     
-    def add_points(self, player_id: str, points: int) -> None:
+    # ==================== Bot Logic ====================
+    
+    def bot_move(self) -> Optional[Dict]:
         """
-        Add points to a player's score.
+        Execute bot's move based on difficulty level.
+        Each GameSession has its own bot instance with its own memory.
+        
+        Returns:
+            Dictionary with move information or None if invalid state
+        """
+        if not self.bot_ai or self.game_mode != GameMode.SINGLEPLAYER_AI:
+            return None
+        
+        if not self.cards:
+            return None
+        
+        # Get available cards (not flipped, not matched)
+        available_cards = [
+            (i, card) for i, card in enumerate(self.cards)
+            if not card.flipped and not card.matched
+        ]
+        
+        if not available_cards or len(available_cards) < 2:
+            return None
+        
+        if self.difficulty == 'Leicht':
+            return self._random_bot_move(available_cards)
+        else:  # 'Mittel' or 'Schwer'
+            return self._bot_memory_move(available_cards)
+    
+    def _random_bot_move(self, available_cards: List[Tuple]) -> Dict:
+        """Bot makes random moves"""
+        # First card
+        first_idx, first_card = random.choice(available_cards)
+        self.flip_card(self.current_player_turn, first_idx)
+        # Bot remembers its own cards
+        if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
+            self.bot_ai.remember_card(first_idx, first_card.id, seen_by='bot')
+        
+        # Second card (remove first from available)
+        remaining = [c for c in available_cards if c[0] != first_idx]
+        if not remaining:
+            return {'first_card': first_idx, 'second_card': None, 'type': 'random', 'is_pair': False}
+        
+        second_idx, second_card = random.choice(remaining)
+        self.flip_card(self.current_player_turn, second_idx)
+        # Bot remembers its own cards
+        if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
+            self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
+        
+        return {
+            'type': 'random',
+            'first_card': first_idx,
+            'second_card': second_idx,
+            'is_pair': first_card.id == second_card.id
+        }
+    
+    def _bot_memory_move(self, available_cards: List[Tuple]) -> Dict:
+        """Bot uses memory to find pairs (for Mittel and Schwer difficulties)"""
+        # Check if bot knows a pair
+        pair = self.bot_ai.find_known_pair()
+        
+        if pair:
+            first_idx, second_idx = pair
+            # Check if cards are still available
+            available_indices = [idx for idx, _ in available_cards]
+            
+            if first_idx in available_indices and second_idx in available_indices:
+                self.flip_card(self.current_player_turn, first_idx)
+                self.flip_card(self.current_player_turn, second_idx)
+                
+                # Bot remembers its own cards
+                first_card = self.cards[first_idx]
+                second_card = self.cards[second_idx]
+                if self.bot_ai and self.difficulty in ['Mittel', 'Schwer']:
+                    self.bot_ai.remember_card(first_idx, first_card.id, seen_by='bot')
+                    self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
+                
+                return {
+                    'type': 'memory',
+                    'first_card': first_idx,
+                    'second_card': second_idx,
+                    'is_pair': first_card.id == second_card.id
+                }
+        
+        # Fall back to random move if no known pair
+        return self._random_bot_move(available_cards)
+    
+    # ==================== Scoring & Ranking ====================
+    
+    def calculate_rank(self, time_seconds: int) -> str:
+        """
+        Calculate rank based on time and board size.
+        Used for singleplayer "Player vs. Time" mode.
         
         Args:
-            player_id: ID of player to award points
-            points: Number of points to add
+            time_seconds: Time elapsed in seconds
+            
+        Returns:
+            Rank (A, B, C, D, E)
         """
-        if player_id in self.player_points:
-            self.player_points[player_id] += points
+        if self.board_size == 16:
+            if time_seconds < 60:
+                return 'A'
+            elif time_seconds < 120:
+                return 'B'
+            elif time_seconds < 180:
+                return 'C'
+            elif time_seconds < 240:
+                return 'D'
+            else:
+                return 'E'
+        elif self.board_size == 36:
+            if time_seconds < 120:
+                return 'A'
+            elif time_seconds < 240:
+                return 'B'
+            elif time_seconds < 360:
+                return 'C'
+            elif time_seconds < 480:
+                return 'D'
+            else:
+                return 'E'
+        elif self.board_size == 64:
+            if time_seconds < 180:
+                return 'A'
+            elif time_seconds < 360:
+                return 'B'
+            elif time_seconds < 540:
+                return 'C'
+            elif time_seconds < 720:
+                return 'D'
+            else:
+                return 'E'
+        
+        return 'E'
+    
+    # ==================== Win Condition & Finishing ====================
     
     def check_win_condition(self) -> bool:
         """
         Check if the game should end.
-        This happens when all cards are matched or time expires.
+        Game ends when all cards are matched or time expires.
         
         Returns:
             True if game should end, False otherwise
@@ -298,10 +528,15 @@ class GameSession:
         """
         Finish the game and determine winner(s).
         Builds final results for all players.
+        Calculates rankings for time-based modes.
         """
         self.status = GameStatus.FINISHED
         self.finished = True
         self.ended_at = datetime.now()
+        
+        # Calculate elapsed time
+        if self.started_at:
+            self.elapsed_time = int((self.ended_at - self.started_at).total_seconds())
         
         # Determine winner(s)
         max_points = max(self.player_points.values()) if self.player_points else 0
@@ -311,16 +546,34 @@ class GameSession:
         self.winner = winners[0] if len(winners) == 1 else None
         
         # Build final results for each player
-        self.final_results = [
-            PlayerResult(
+        self.final_results = []
+        for pid in self.player_ids:
+            rank = None
+            # Calculate rank for singleplayer time mode
+            if self.game_mode == GameMode.SINGLEPLAYER_TIME and len(self.player_ids) == 1:
+                rank = self.calculate_rank(self.elapsed_time)
+            
+            result = PlayerResult(
                 player_id=pid,
                 points=self.player_points[pid],
                 is_winner=pid in winners,
                 moves_count=sum(1 for m in self.move_history if m.player_id == pid),
-                time_spent=self.elapsed_time
+                time_spent=self.elapsed_time,
+                rank=rank
             )
-            for pid in self.player_ids
-        ]
+            self.final_results.append(result)
+    
+    # ==================== Data Access Methods ====================
+    
+    def get_board_size_text(self) -> str:
+        """Get human-readable deck size text"""
+        if self.board_size == 16:
+            return 'Klein (16 Karten)'
+        elif self.board_size == 36:
+            return 'Mittel (36 Karten)'
+        elif self.board_size == 64:
+            return 'Groß (64 Karten)'
+        return ''
     
     # ==================== Serialization & Data Methods ====================
     
@@ -349,6 +602,7 @@ class GameSession:
                 for card in self.cards
             ],
             "matched_pairs_count": len(self.matched_pairs),
+            "pairs_found": self.pairs_found,
             "player_points": self.player_points,
             "elapsed_time": self.elapsed_time,
             "finished": self.finished,
@@ -359,7 +613,8 @@ class GameSession:
                     "points": r.points,
                     "is_winner": r.is_winner,
                     "moves_count": r.moves_count,
-                    "time_spent": r.time_spent
+                    "time_spent": r.time_spent,
+                    "rank": r.rank
                 }
                 for r in self.final_results
             ] if self.final_results else []
@@ -418,7 +673,7 @@ class GameSessionManager:
         player_ids: List[str],
         difficulty: str,
         board_size: int,
-        game_mode: GameMode = GameMode.SINGLEPLAYER
+        game_mode: GameMode = GameMode.SINGLEPLAYER_TIME
     ) -> GameSession:
         """
         Create and register a new game session.
@@ -427,7 +682,7 @@ class GameSessionManager:
             player_ids: List of player IDs participating
             difficulty: Difficulty level ('Leicht', 'Mittel', 'Schwer', 'None')
             board_size: Number of cards (16, 36, or 64)
-            game_mode: Type of game (SINGLEPLAYER, MULTIPLAYER, AI)
+            game_mode: Type of game (SINGLEPLAYER_TIME, SINGLEPLAYER_AI, MULTIPLAYER)
             
         Returns:
             The newly created GameSession instance
@@ -507,3 +762,4 @@ class GameSessionManager:
         for sid in finished_ids:
             del self.sessions[sid]
         return len(finished_ids)
+

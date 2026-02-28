@@ -21,12 +21,27 @@ class BotAI:
         self.card_count = card_count
         self.memory.clear()
     
-    def remember_card(self, index: int, card_id: int) -> None:
-        """Bot remembers a card"""
+    def remember_card(self, index: int, card_id: int, seen_by: str = 'bot') -> None:
+        """
+        Bot remembers a card based on difficulty level and who revealed it.
+        
+        Args:
+            index: Card position index
+            card_id: Card ID
+            seen_by: 'bot' if bot revealed the card, 'player' if player revealed it
+        """
         max_memory = self._get_max_memory_size()
         
-        # Don't add if already remembered
+        # Don't remember if already in memory
         if index in self.memory:
+            return
+        
+        # For 'Mittel' difficulty: only remember cards bot revealed
+        if self.difficulty == 'Mittel' and seen_by == 'player':
+            return
+        
+        # For 'Leicht' difficulty: don't remember anything
+        if self.difficulty == 'Leicht':
             return
         
         # Remove oldest card if memory is full

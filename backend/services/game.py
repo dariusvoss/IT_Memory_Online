@@ -152,11 +152,14 @@ class GameService:
             card['flipped'] = True
             self.selected_cards.append({'index': card_index, 'card': card})
             
-            # Remember card for bot if difficulty requires it
+            # Remember card for bot based on difficulty
             if self.difficulty == 'Mittel' and not self.is_player_turn:
-                self.bot_ai.remember_card(card_index, card['id'])
+                # Mittel: Bot only remembers cards it revealed
+                self.bot_ai.remember_card(card_index, card['id'], seen_by='bot')
             elif self.difficulty == 'Schwer':
-                self.bot_ai.remember_card(card_index, card['id'])
+                # Schwer: Bot remembers all cards (both player and bot)
+                seen_by = 'bot' if not self.is_player_turn else 'player'
+                self.bot_ai.remember_card(card_index, card['id'], seen_by=seen_by)
         
         # Check if we have two cards selected
         if len(self.selected_cards) == 2:
