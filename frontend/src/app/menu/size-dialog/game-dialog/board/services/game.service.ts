@@ -14,6 +14,7 @@ import { environment } from '../../../../../../environments/environment';
 export class GameService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/game`;
+  private sessionService = inject(SessionService);
 
   isPlayerTurn: boolean = true;
   gameStarted: boolean = false;

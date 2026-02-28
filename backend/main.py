@@ -8,7 +8,8 @@ from datetime import datetime
 import uuid
 from fastapi.responses import JSONResponse
 from services.matchmaker import matchmaker, Match
-from services.game_session import GameSessionManager, GameMode
+from services.game_session import GameMode
+from services.session_manager import GameSessionManager
 
 app = FastAPI(title="Memory Game Backend", version="1.0.0")
 

@@ -9,8 +9,8 @@ import { environment } from '../../../../../../environments/environment';
 })
 export class TimerService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/session';
-  private sessionId: string = '`;
+  private apiUrl = `${environment.apiUrl}/session`;
+  private sessionId: string = '';
 
   private secondsElapsed = 0;
   private timer$ = new BehaviorSubject<number>(this.secondsElapsed);
