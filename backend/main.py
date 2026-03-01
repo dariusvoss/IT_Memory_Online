@@ -16,10 +16,13 @@ app = FastAPI(title="Memory Game Backend", version="1.0.0")
 # CORS configuration for Angular frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:4200",      # Dein Frontend während Entwicklung
+        "https://memory.ipv64.de",     # Deine Production-Domain
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],  # Nur nötige Methoden
+    allow_headers=["Content-Type", "Authorization"],  # Nur nötige Headers
 )
 
 # Import services
@@ -38,22 +41,16 @@ game_session_manager = GameSessionManager()
 def on_players_matched(match: Match):
     """Create game session when players are matched"""
     print(f"Players matched: {match.player_ids}")
-    
-    # Create multiplayer game session
+
+    # Session korrekt erzeugen!
     session = game_session_manager.create_session(
         player_ids=match.player_ids,
-        difficulty='Mittel',  # or customize
-        board_size=16,  # or customize
-        game_mode=GameMode.MULTIPLAYER
+        difficulty='None',
+        board_size=match.deck_size,
+        game_mode=GameMode.MULTIPLAYER.value
     )
-    
-    # Initialize the game
-    session.initialize_game()
-    
-    # Link match to session
-    matchmaker.set_match_game_session(match.match_id, session.session_id)
-    
-    print(f"Game session created: {session.session_id}")
+    session.initialize_game()  # Jetzt ist session ein Objekt!
+    match.game_session_id = session.session_id
 
 matchmaker.on_matched(on_players_matched)
 
@@ -551,12 +548,14 @@ def join_queue(data: dict):
     player_id = data.get("player_id")
     deck_size = data.get("deck_size")  # <– neu
     matchmaker.join_queue(player_id, deck_size)
-    return {"status": "joined", "queue_size": matchmaker.get_queue_size()}
+    return {"status": "joined", "queue_size": matchmaker.get_queue_size(), "player_deck_size": matchmaker.player_deck_size.get(player_id)}
 
 @app.post("/api/matchmaking/leave-queue")
-def leave_queue(request: PlayerIdRequest):
+def leave_queue(data: dict):
     """Leave the matchmaking queue"""
-    success = matchmaker.leave_queue(request.player_id)
+    player_id = data.get("player_id")
+    deck_size = data.get("deck_size")
+    success = matchmaker.leave_queue(player_id, deck_size)
     return {
         "status": "success" if success else "error",
         "message": "Left queue" if success else "Not in queue"
@@ -579,7 +578,8 @@ def get_matchmaking_status(player_id: str):
     elif matchmaker.is_player_in_queue(player_id):
         return {
             "status": "waiting",
-            "queue_position": matchmaker.get_queue().index(player_id) + 1,
+            "queue_position": "matchmaker.get_queue_position(player_id)",
+            "player_deck_size": matchmaker.player_deck_size.get(player_id),
             "queue_size": matchmaker.get_queue_size()
         }
     else:
@@ -620,60 +620,6 @@ def verify_player_id(request: Request):
     
     raise HTTPException(status_code=401, detail="Player ID not found")
 
-# ========================= Matchmaking Routes =========================
-
-@app.post("/api/matchmaking/join-queue")
-def join_queue(data: dict):
-    """Join the matchmaking queue"""
-    player_id = data.get("player_id")
-    deck_size = data.get("deck_size")  # <– neu
-    matchmaker.join_queue(player_id, deck_size)
-    return {"status": "joined", "queue_size": matchmaker.get_queue_size()}
-
-@app.post("/api/matchmaking/leave-queue")
-def leave_queue(request: PlayerIdRequest):
-    """Leave the matchmaking queue"""
-    success = matchmaker.leave_queue(request.player_id)
-    return {
-        "status": "success" if success else "error",
-        "message": "Left queue" if success else "Not in queue"
-    }
-
-@app.get("/api/matchmaking/status/{player_id}")
-def get_matchmaking_status(player_id: str):
-    """Get matchmaking status for a player"""
-    match = matchmaker.get_player_match(player_id)
-    
-    if match and match.game_session_id:
-        session = game_session_manager.get_session(match.game_session_id)
-        return {
-            "status": "matched",
-            "match_id": match.match_id,
-            "opponent": [p for p in match.player_ids if p != player_id][0],
-            "game_session_id": match.game_session_id,
-            "session": session.to_dict() if session else None
-        }
-    elif matchmaker.is_player_in_queue(player_id):
-        return {
-            "status": "waiting",
-            "queue_position": matchmaker.get_queue().index(player_id) + 1,
-            "queue_size": matchmaker.get_queue_size()
-        }
-    else:
-        return {"status": "not_in_queue"}
-
-@app.get("/api/matchmaking/stats")
-def get_matchmaker_stats():
-    """Get matchmaker statistics"""
-    return matchmaker.get_stats()
-
-@app.get("/api/matchmaking/queue")
-def get_queue():
-    """Get current matchmaking queue"""
-    return {
-        "queue": matchmaker.get_queue(),
-        "queue_size": matchmaker.get_queue_size()
-    }
 
 # ========================= Error Handlers =========================
 

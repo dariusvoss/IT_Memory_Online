@@ -87,19 +87,27 @@ class Matchmaker:
         self._try_match(deck_size)
         return True
     
-    def leave_queue(self, player_id: str) -> bool:
+    def leave_queue(self, player_id: str, deck_size: int = None) -> bool:
         """
         Remove a player from the queue.
         
         Args:
             player_id: Player to remove
+            deck_size: Kartensatzgröße (optional, falls nicht angegeben, wird automatisch aus player_deck_size geholt)
             
         Returns:
             True if player was removed, False if not found
         """
-        if player_id in self.queue:
-            self.queue.remove(player_id)
-            return True
+        if player_id in self.player_deck_size:
+            deck_size = self.player_deck_size[player_id]
+            if deck_size not in self.queue:
+                return False
+            if player_id in self.queue[deck_size]:
+                self.queue[deck_size].remove(player_id)
+                if not self.queue[deck_size]:
+                    del self.queue[deck_size]
+                del self.player_deck_size[player_id]
+                return True
         return False
     
     def is_player_in_queue(self, player_id: str) -> bool:
