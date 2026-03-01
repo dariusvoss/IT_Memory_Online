@@ -158,6 +158,25 @@ export class SessionService {
   }
 
   /**
+   * Finalize move: flip back unmatched cards and update state
+   * Called by Frontend after cardVisibilityDuration (1200ms)
+   */
+  finalizeMove(): Observable<any> {
+    if (!this.currentSessionId) {
+      throw new Error('No active session');
+    }
+
+    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/finalize-move`, {}).pipe(
+      tap((response: any) => {
+        if (response.data) {
+          this.sessionStateSubject.next(response.data);
+        }
+        console.log('Move finalized');
+      })
+    );
+  }
+
+  /**
    * Reset game session
    */
   resetSession(): Observable<any> {

@@ -66,10 +66,12 @@ export class TimerService {
     this.timer$.next(this.secondsElapsed);
 
     // Also notify backend
-    this.http.post(`${this.apiUrl}/reset`, {}).subscribe(
-      () => console.log('Backend timer reset'),
-      error => console.error('Error resetting backend timer:', error)
-    );
+    if (this.sessionId) {
+      this.http.post(`${this.apiUrl}/${this.sessionId}/reset`, {}).subscribe(
+        () => console.log('Backend timer reset'),
+        error => console.error('Error resetting backend timer:', error)
+      );
+    }
   }
 
   getTimer() {

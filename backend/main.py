@@ -156,6 +156,27 @@ def reset_game(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/api/session/{session_id}/finalize-move")
+def finalize_move(session_id: str = Path(...)):
+    """
+    Finalize the current move.
+    Called by Frontend after cardVisibilityDuration.
+    Flips back unmatched cards and returns updated session state.
+    """
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    try:
+        session.finalize_move()
+        return {
+            "status": "success",
+            "message": "Move finalized",
+            "data": session.to_dict()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @app.delete("/api/session/{session_id}")
 def delete_session(session_id: str = Path(...)):
     """Delete/close a game session"""
@@ -185,22 +206,37 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
                 "message": "Could not flip card",
                 "valid_move": False
             }
+        # Get selected cards count BEFORE check_match (which may clear them)
+        selected_cards_count_before_match = len(session.selected_cards)
+        
+        # Get the IDs and positions of the currently selected cards BEFORE they're cleared by check_match()
+        card_ids = []
+        card_positions = []
+        for idx, _ in session.selected_cards:
+            card_ids.append(session.cards[idx].id)
+            card_positions.append(idx)
         
         # Check if this reveals a match
         is_match, matched_positions = session.check_match()
         
-        return {
+        response_data = {
             "status": "success",
             "valid_move": True,
             "cards": serialize_cards(session.cards),
-            "selected_cards_count": len(session.selected_cards),
+            "selected_cards_count": selected_cards_count_before_match,
             "is_match": is_match,
             "matched_positions": matched_positions,
+            "card_ids": card_ids,
+            "card_positions": card_positions,
             "current_player": session.current_player_turn,
             "player_points": session.player_points,
             "pairs_found": session.pairs_found,
-            "game_mode": session.game_mode.value
+            "game_mode": session.game_mode.value,
+            "is_player_turn": session.current_player_turn == session.player_ids[0] if session.player_ids else False,
+            "bot_points": session.player_points.get('bot', session.player_points.get('player2', 0)),
+            "elapsed_time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0
         }
+        return response_data
     except (ValueError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -268,7 +304,8 @@ def check_win(session_id: str = Path(...)):
                 "winner": session.winner,
                 "player_points": session.player_points,
                 "pairs_found": session.pairs_found,
-                "difficulty": session.difficulty
+                "difficulty": session.difficulty,
+                "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0
             }
             
             # Only calculate rank for time-based mode

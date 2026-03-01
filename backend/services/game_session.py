@@ -190,6 +190,9 @@ class GameSession:
         
         # ==================== Metadata ====================
         self.metadata: Dict[str, any] = {}
+        
+        # ==================== Move Finalization ====================
+        self.last_unmatched_cards: List[int] = []  # Cards that need to be flipped back when finalized
     
     # ==================== Card Initialization ====================
     
@@ -222,11 +225,15 @@ class GameSession:
         self.shuffle_cards()
         
         # Reset game state
+        self.status = GameStatus.WAITING  # Ensure status is WAITING when initializing
+        self.finished = False
         self.selected_cards = []
         self.pairs_found = 0
         self.player_points = {pid: 0 for pid in self.player_ids}
         self.move_history = []
         self.matched_pairs = []
+        self.started_at = None
+        self.ended_at = None
         
         # Initialize bot if needed
         if self.bot_ai:
@@ -285,7 +292,8 @@ class GameSession:
     def check_match(self) -> Tuple[bool, List[int]]:
         """
         Check if the two selected cards match.
-        Handles scoring, flipping back non-matches, and turn switching.
+        Handles scoring and turn switching.
+        NOTE: Does NOT flip cards back on mismatch - Frontend handles card flipping animation.
         
         Returns:
             Tuple of (is_match: bool, card_positions: List[int])
@@ -330,16 +338,17 @@ class GameSession:
                 self.bot_ai.forget_card(idx1)
                 self.bot_ai.forget_card(idx2)
         else:
-            # Flip cards back if no match
-            card1.flipped = False
-            card2.flipped = False
-            
-            # Record unsuccessful move
+            # No match - Record unsuccessful move
+            # NOTE: Cards stay flipped! Frontend will flip them back after cardVisibilityDuration.
+            # Only after Frontend calls finalize-move will cards be actually flipped back.
             self.record_move(
                 self.current_player_turn,
                 [idx1, idx2],
                 is_match=False
             )
+            
+            # Store indices for later finalization
+            self.last_unmatched_cards = [idx1, idx2]
             
             # Switch turn on mismatch (except in singleplayer time mode)
             if self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
@@ -349,6 +358,19 @@ class GameSession:
         self.selected_cards = []
         
         return is_pair, [idx1, idx2]
+    
+    
+    def finalize_move(self) -> None:
+        """
+        Finalize the last move: flip back unmatched cards.
+        Called by Frontend after cardVisibilityDuration.
+        This ensures perfect synchronization between Frontend and Backend.
+        """
+        for idx in self.last_unmatched_cards:
+            if 0 <= idx < len(self.cards):
+                self.cards[idx].flipped = False
+        
+        self.last_unmatched_cards = []
     
     def next_turn(self) -> None:
         """
@@ -423,11 +445,15 @@ class GameSession:
         if self.difficulty in ['Mittel', 'Schwer']:
             self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
         
+        # Check if bot's cards match (important: must be done here!)
+        is_match, matched_positions = self.check_match()
+        
         return {
             'type': 'bot_move',
             'first_card': first_idx,
             'second_card': second_idx,
-            'is_pair': first_card.id == second_card.id
+            'is_pair': is_match,
+            'matched_positions': matched_positions
         }
     
     # ==================== Scoring & Ranking ====================
@@ -505,6 +531,7 @@ class GameSession:
         self.status = GameStatus.FINISHED
         self.finished = True
         self.ended_at = datetime.now()
+        self.last_unmatched_cards = []  # Clear any pending unmatched cards
         
         # Calculate elapsed time
         if self.started_at:
@@ -559,6 +586,7 @@ class GameSession:
         self.final_results = []
         self.elapsed_time = 0
         self.time_expired = False
+        self.last_unmatched_cards = []
         
         # Reset game state
         self.initialize_game()

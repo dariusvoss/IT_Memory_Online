@@ -64,6 +64,10 @@ class GameSessionManager:
             except KeyError:
                 raise ValueError(f"Invalid game mode: {game_mode}")
         
+        # For SINGLEPLAYER_AI, add bot as second player
+        if game_mode == GameMode.SINGLEPLAYER_AI and len(player_ids) == 1:
+            player_ids = player_ids + ['bot']
+        
         session = GameSession(
             session_id=session_id,
             player_ids=player_ids,
