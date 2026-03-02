@@ -1,11 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';   // <– add this
+import { HttpClient } from '@angular/common/http';
 import { MenuComponent } from '../menu.component';
 import { environment } from '../../../environments/environment';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap/modal';
 import { SizeDialogComponent } from '../size-dialog/size-dialog.component';
+import { GameDialogComponent } from '../size-dialog/game-dialog/game-dialog.component';
 
 @Component({
   selector: 'app-mode-selection',
@@ -17,6 +18,7 @@ import { SizeDialogComponent } from '../size-dialog/size-dialog.component';
 export class GameModeSelectionComponent {
   selectedMode: 'none' | 'singleplayer' | 'multiplayer' = 'none';
   private selectedSize: number = -1; // Standardgröße
+  pollingInterval: NodeJS.Timeout | undefined;
 
   constructor(private http: HttpClient, private modalService: NgbModal) {}      // <– inject HttpClient
 
@@ -32,12 +34,27 @@ export class GameModeSelectionComponent {
           error: err => console.error('Error joining queue:', err)
         });
           // this.openGameDialog(mode);
+          this.startMatchmakingPolling(environment.playerId);
         }
       }).catch((error) => {
         console.log('SizeDialog dismissed');
       });
     }
 
+  startMatchmakingPolling(playerId: string) {
+    this.pollingInterval = setInterval(() => {
+      this.http.get(`${environment.apiUrl}/matchmaking/status/${playerId}`).subscribe((res: any) => {
+        if (res.status === 'matched') {
+          clearInterval(this.pollingInterval);
+          this.openBoardDialog(res.game_session_id);
+        }
+      });
+    }, 2000);
+  }
+  openBoardDialog(sessionId: string) {
+    const modalRef = this.modalService.open(GameDialogComponent, { size: 'xl', centered: true });
+    modalRef.componentInstance.sessionId = sessionId;
+  }
   selectSingleplayer(): void {
     this.selectedMode = 'singleplayer';
   }

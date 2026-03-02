@@ -34,23 +34,23 @@ from models import GameRecord
 session_manager = GameSessionManager(session_timeout_minutes=30)
 timer_service = TimerService()
 
-# Initialize game session manager
-game_session_manager = GameSessionManager()
 
 # Register matchmaker callback
 def on_players_matched(match: Match):
     """Create game session when players are matched"""
-    print(f"Players matched: {match.player_ids}")
+    # print(f"Players matched: {match.player_ids}")
 
     # Session korrekt erzeugen!
-    session = game_session_manager.create_session(
+    session_id  = session_manager.create_session(
         player_ids=match.player_ids,
         difficulty='None',
         board_size=match.deck_size,
         game_mode=GameMode.MULTIPLAYER.value
     )
-    session.initialize_game()  # Jetzt ist session ein Objekt!
-    match.game_session_id = session.session_id
+    session = session_manager.get_session(session_id)  # Session-Objekt holen
+    if session:
+        # session.initialize_game()
+        match.game_session_id = session_id
 
 matchmaker.on_matched(on_players_matched)
 
@@ -470,6 +470,8 @@ def get_analysis(session_id: str = Path(...)):
         "finished": session.finished
     }
 
+
+# ========================= Admin Routes =========================
 @app.get("/api/admin/sessions")
 def get_active_sessions():
     """Get all active sessions (for debug/admin)"""
@@ -494,6 +496,12 @@ def cleanup_sessions():
         "cleaned_up": count,
         "remaining_sessions": session_manager.get_session_count()
     }
+
+@app.get("/api/admin/active-matches")
+def get_active_matches():
+    """Gibt alle laufenden Matches zurück"""
+    active_matches = matchmaker.get_active_matches()  
+    return {"active_matches": [match.to_dict() for match in active_matches]}
 
 # ========================= Helper Functions =========================
 
@@ -547,8 +555,14 @@ def join_queue(data: dict):
     """Join the matchmaking queue"""
     player_id = data.get("player_id")
     deck_size = data.get("deck_size")  # <– neu
-    matchmaker.join_queue(player_id, deck_size)
-    return {"status": "joined", "queue_size": matchmaker.get_queue_size(), "player_deck_size": matchmaker.player_deck_size.get(player_id)}
+    if matchmaker.join_queue(player_id, deck_size):
+        return {
+            "status": "joined", 
+            "queue_size": matchmaker.get_queue_size(),
+            "player_deck_size": matchmaker.player_deck_size.get(player_id)
+            }
+    else:
+        return {"status": "error", "message": "Already in queue or in a match"}
 
 @app.post("/api/matchmaking/leave-queue")
 def leave_queue(data: dict):
@@ -567,11 +581,11 @@ def get_matchmaking_status(player_id: str):
     match = matchmaker.get_player_match(player_id)
     
     if match and match.game_session_id:
-        session = game_session_manager.get_session(match.game_session_id)
+        session = session_manager.get_session(match.game_session_id)
         return {
             "status": "matched",
             "match_id": match.match_id,
-            "opponent": [p for p in match.player_ids if p != player_id][0],
+            "opponent": [p for p in match.player_ids if p != player_id],
             "game_session_id": match.game_session_id,
             "session": session.to_dict() if session else None
         }
@@ -625,10 +639,10 @@ def verify_player_id(request: Request):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    return {
-        "status": "error",
-        "message": exc.detail
-    }
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"status": "error", "message": exc.detail}
+    )
 
 if __name__ == "__main__":
     import uvicorn

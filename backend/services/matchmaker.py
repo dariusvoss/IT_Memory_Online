@@ -38,6 +38,16 @@ class Match:
             self.metadata = {}
 
 
+    def to_dict(self):
+        return {
+            "match_id": self.match_id,
+            "player_ids": self.player_ids,
+            "status": getattr(self, "status", None),
+            "game_session_id": getattr(self, "game_session_id", None),
+            # weitere Felder nach Bedarf
+        }
+
+
 class Matchmaker:
     """
     Manages player queue and automatic matching for multiplayer games.
@@ -283,6 +293,10 @@ class Matchmaker:
             "active_matches": sum(1 for m in self.matches.values() if m.status == MatchStatus.MATCHED),
             "completed_matches": sum(1 for m in self.matches.values() if m.status == MatchStatus.COMPLETED)
         }
+
+    def get_active_matches(self):
+        """Gibt alle laufenden Matches zurück"""
+        return [m for m in self.matches.values() if m.status == MatchStatus.MATCHED.value]
 
 
 # Global instance

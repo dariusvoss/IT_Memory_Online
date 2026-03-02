@@ -79,6 +79,8 @@ class GameSessionManager:
         session.initialize_game()
         
         self.sessions[session_id] = session
+        # print(f"Created new session: {session.session_id}, mode: {session.game_mode}, players: {session.player_ids}")
+        # print(f"Total active sessions: {len(self.sessions)}")
         return session_id
     
     def get_session(self, session_id: str) -> Optional['GameSession']:
