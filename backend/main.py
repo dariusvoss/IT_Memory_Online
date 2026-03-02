@@ -8,7 +8,7 @@ from datetime import datetime
 import uuid
 from fastapi.responses import JSONResponse
 from services.matchmaker import matchmaker, Match
-from services.game_session import GameMode
+from services.game_session import GameMode, GameStatus
 from services.session_manager import GameSessionManager
 
 app = FastAPI(title="Memory Game Backend", version="1.0.0")
@@ -31,8 +31,9 @@ from services.timer import TimerService
 from models import GameRecord
 
 # Initialize services
-session_manager = GameSessionManager(session_timeout_minutes=30)
+session_manager = GameSessionManager()#(session_timeout_minutes=30)
 timer_service = TimerService()
+multiplayer_finish_ack: Dict[str, set] = {}
 
 
 # Register matchmaker callback
@@ -43,14 +44,11 @@ def on_players_matched(match: Match):
     # Session korrekt erzeugen!
     session_id  = session_manager.create_session(
         player_ids=match.player_ids,
-        difficulty='None',
+        difficulty="medium",
         board_size=match.deck_size,
-        game_mode=GameMode.MULTIPLAYER.value
+        game_mode=GameMode.MULTIPLAYER
     )
-    session = session_manager.get_session(session_id)  # Session-Objekt holen
-    if session:
-        # session.initialize_game()
-        match.game_session_id = session_id
+    match.game_session_id = session_id
 
 matchmaker.on_matched(on_players_matched)
 
@@ -291,6 +289,20 @@ def check_win(session_id: str = Path(...)):
         raise HTTPException(status_code=404, detail="Session not found")
     
     try:
+        if session.finished:
+            return {
+                "status": "success",
+                "won": True,
+                "game_mode": session.game_mode.value,
+                "winner": session.winner,
+                "player_points": session.player_points,
+                "pairs_found": session.pairs_found,
+                "difficulty": session.difficulty,
+                "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0,
+                "finish_reason": session.metadata.get("finish_reason"),
+                "quitter_id": session.metadata.get("quitter_id")
+            }
+
         is_won = session.check_win()
         
         if is_won:
@@ -302,7 +314,9 @@ def check_win(session_id: str = Path(...)):
                 "player_points": session.player_points,
                 "pairs_found": session.pairs_found,
                 "difficulty": session.difficulty,
-                "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0
+                "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0,
+                "finish_reason": session.metadata.get("finish_reason"),
+                "quitter_id": session.metadata.get("quitter_id")
             }
             
             # Only calculate rank for time-based mode
@@ -315,6 +329,53 @@ def check_win(session_id: str = Path(...)):
         return {"status": "success", "won": False}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/session/{session_id}/leave")
+def leave_multiplayer_session(session_id: str = Path(...), data: dict = Body(...)):
+    """
+    A player leaves an active multiplayer game.
+    The other player is marked as winner and the session is finished.
+    """
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id is required")
+
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.game_mode != GameMode.MULTIPLAYER:
+        raise HTTPException(status_code=400, detail="Leave endpoint is only available for multiplayer sessions")
+
+    if player_id not in session.player_ids:
+        raise HTTPException(status_code=400, detail="Player is not part of this session")
+
+    if not session.finished:
+        opponents = [pid for pid in session.player_ids if pid != player_id]
+        winner = opponents[0] if opponents else None
+
+        session.status = GameStatus.FINISHED
+        session.finished = True
+        session.ended_at = datetime.now()
+        session.winner = winner
+        session.last_unmatched_cards = []
+        session.metadata["finish_reason"] = "player_left"
+        session.metadata["quitter_id"] = player_id
+
+    if session_id not in multiplayer_finish_ack:
+        multiplayer_finish_ack[session_id] = set()
+
+    # quitter is treated as already acknowledged
+    multiplayer_finish_ack[session_id].add(player_id)
+
+    return {
+        "status": "success",
+        "message": "Player left the session",
+        "winner": session.winner,
+        "finish_reason": session.metadata.get("finish_reason"),
+        "quitter_id": session.metadata.get("quitter_id")
+    }
 
 # ========================= Routes - Timer Management =========================
 
@@ -582,6 +643,10 @@ def get_matchmaking_status(player_id: str):
     
     if match and match.game_session_id:
         session = session_manager.get_session(match.game_session_id)
+        if not session:
+            # Cleanup stale match references if session no longer exists
+            matchmaker.delete_match(match.match_id)
+            return {"status": "not_in_queue"}
         return {
             "status": "matched",
             "match_id": match.match_id,
@@ -610,6 +675,76 @@ def get_queue():
     return {
         "queue": matchmaker.get_queue(),
         "queue_size": matchmaker.get_queue_size()
+    }
+
+@app.delete("/api/matchmaking/match/{match_id}")
+def delete_match(match_id: str):
+    """Löscht ein aktives Match basierend auf der match_id"""
+    try:
+        success = matchmaker.delete_match(match_id)
+        if success:
+            return {"status": "success", "message": "Match deleted"}
+        else:
+            raise HTTPException(status_code=404, detail="Match not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/session/{session_id}/finish-ack")
+def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
+    """
+    Acknowledge game finish from one player.
+    Deletes multiplayer session + match only after both players acknowledged.
+    """
+    player_id = data.get("player_id")
+    if not player_id:
+        raise HTTPException(status_code=400, detail="player_id is required")
+
+    session = session_manager.get_session(session_id)
+
+    # If session already gone, ensure stale matchmaking refs are cleaned
+    if not session:
+        matchmaker.delete_match_by_session(session_id)
+        multiplayer_finish_ack.pop(session_id, None)
+        return {
+            "status": "success",
+            "cleaned_up": True,
+            "message": "Session already cleaned"
+        }
+
+    from services.game_session import GameMode
+    if session.game_mode != GameMode.MULTIPLAYER:
+        return {
+            "status": "success",
+            "cleaned_up": False,
+            "message": "No multiplayer cleanup required"
+        }
+
+    if session_id not in multiplayer_finish_ack:
+        multiplayer_finish_ack[session_id] = set()
+
+    multiplayer_finish_ack[session_id].add(player_id)
+
+    # Count only real players (exclude bot just in case)
+    required_players = [pid for pid in session.player_ids if pid != 'bot']
+    all_acknowledged = all(pid in multiplayer_finish_ack[session_id] for pid in required_players)
+
+    if all_acknowledged:
+        session_manager.delete_session(session_id)
+        matchmaker.delete_match_by_session(session_id)
+        multiplayer_finish_ack.pop(session_id, None)
+        return {
+            "status": "success",
+            "cleaned_up": True,
+            "message": "Session and match cleaned up"
+        }
+
+    return {
+        "status": "success",
+        "cleaned_up": False,
+        "acknowledged": list(multiplayer_finish_ack[session_id]),
+        "required": required_players,
+        "message": "Waiting for other player acknowledgement"
     }
 
 # ========================= Player ID Routes =========================

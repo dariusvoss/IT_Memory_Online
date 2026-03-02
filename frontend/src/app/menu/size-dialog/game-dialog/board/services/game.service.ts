@@ -8,6 +8,8 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import { environment } from '../../../../../../environments/environment';
 
+type GameModeType = 'singleplayer_time' | 'singleplayer_ai' | 'multiplayer';
+
 // Card interface for type safety
 export interface GameCard {
   id: number;
@@ -37,6 +39,7 @@ export class GameService {
   gameEnded: EventEmitter<void> = new EventEmitter<void>();
 
   private sessionId: string = '';
+  private currentGameMode: GameModeType = 'singleplayer_time';
   private selectedCards: any[] = [];
   private gameInitialized: boolean = false;
   private pairsFound = 0;
@@ -50,6 +53,9 @@ export class GameService {
   private cards: GameCard[] = [];
   private gameRecords: any[] = [];
   private selectedImages: string[] = [];
+  private multiplayerPollingInterval: any = null;
+  private isProcessingLocalAction: boolean = false;
+  private finishDialogShown: boolean = false;
 
   // Observable für UI Updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -77,6 +83,14 @@ export class GameService {
 
   public get difficultyGetter(): string {
     return this.difficulty;
+  }
+
+  public get gameModeGetter(): GameModeType {
+    return this.currentGameMode;
+  }
+
+  private get localPlayerId(): string {
+    return environment.playerId;
   }
 
   public setDifficulty(level: 'Leicht' | 'Mittel' | 'Schwer' | 'None') {
@@ -112,10 +126,12 @@ export class GameService {
    */
   initializeGame(cardCount: number): Observable<any> {
     // Determine game mode based on difficulty
-    let gameMode = 'singleplayer_time';
+    let gameMode: GameModeType = 'singleplayer_time';
     if (this.difficulty !== 'None') {
       gameMode = 'singleplayer_ai';
     }
+
+    this.currentGameMode = gameMode;
 
     // Create session with current settings
     return this.sessionService.createSession(
@@ -151,6 +167,50 @@ export class GameService {
   }
 
   /**
+   * Initialize GameService state from an existing multiplayer session
+   */
+  initializeMultiplayerSession(sessionId: string, sessionData?: any): Observable<any> {
+    this.currentGameMode = 'multiplayer';
+    this.sessionId = sessionId;
+    this.sessionService.setCurrentSessionId(sessionId);
+    this.timerService.setSessionId(sessionId);
+
+    const sessionStateRequest = sessionData
+      ? of({ data: sessionData })
+      : this.sessionService.getSessionState();
+
+    return sessionStateRequest.pipe(
+      tap((response: any) => {
+        const state = response?.data ?? response;
+        if (!state) {
+          return;
+        }
+
+        this.cards = state.cards || [];
+        this.cardsSubject.next(this.cards);
+        this.selectedCards = [];
+        this.lastFlipResponse = null;
+        this.gameStarted = true;
+        this.gameInitialized = state.status === 'active';
+        this.finishDialogShown = false;
+        this.isPlayerTurn = state.current_player
+          ? state.current_player === this.localPlayerId
+          : true;
+
+        console.log('[Multiplayer Init] Current player:', state.current_player, '| Local player:', this.localPlayerId, '| Is my turn:', this.isPlayerTurn);
+
+        this.updatePointsFromState(state.player_points);
+
+        const uniqueIds = new Set(this.cards.map((c: any) => c.id));
+        this.selectedImages = Array.from(uniqueIds);
+
+        // Start polling for multiplayer sessions
+        this.startMultiplayerPolling();
+      })
+    );
+  }
+
+  /**
    * Reset the game to initial state
    */
   resetGame(): Observable<any> {
@@ -171,6 +231,9 @@ export class GameService {
         this.isPlayerTurn = true;
         this.timerService.resetTimer();
         this.difficulty = 'Leicht';
+        this.currentGameMode = 'singleplayer_time';
+        this.stopMultiplayerPolling();
+        this.finishDialogShown = false;
 
         console.log('Game reset');
       })
@@ -190,6 +253,7 @@ export class GameService {
    * Uses session service and handles response
    */
   flipCard(card: any): void {
+    this.isProcessingLocalAction = true;
     const cardIndex = this.cards.indexOf(card);
 
     // Optimistic update - flip immediately
@@ -206,7 +270,7 @@ export class GameService {
         (response: any) => {
           console.log('Game started successfully');
           // Now start the timer after game is started (for no difficulty mode)
-          if (this.difficulty === 'None' && !this.timerService.isTimerRunning) {
+          if (this.currentGameMode === 'singleplayer_time' && !this.timerService.isTimerRunning) {
             this.timerService.startTimer();
           }
         },
@@ -242,16 +306,20 @@ export class GameService {
           this.cardsSubject.next(this.cards);
         }
 
-        if (response.player_points) {
-          this.pairsFoundPlayer = response.player_points['player1'] || 0;
+        this.updatePointsFromState(response.player_points);
+
+        // Update turn state for multiplayer
+        if (this.currentGameMode === 'multiplayer' && response.current_player) {
+          this.isPlayerTurn = response.current_player === this.localPlayerId;
+          console.log('[Multiplayer FlipCard] Current player:', response.current_player, '| Local player:', this.localPlayerId, '| Is my turn:', this.isPlayerTurn);
         }
-        // DO NOT update bot points here - only update in botMove()
-        // The backend doesn't track bot separately, so response.bot_points would reset it to 0
 
         // Check if two cards are selected
         if (response.selected_cards_count >= 2) {
           setTimeout(() => this.checkMatch(response), this.actionDelay);
           console.log('Two cards flipped, checking for match after delay');
+        } else {
+          this.isProcessingLocalAction = false;
         }
         console.log('Card flipped:', cardIndex, 'Response:', response);
       },
@@ -324,9 +392,10 @@ export class GameService {
 
         if (this.gameStarted) {
           // If bot's turn after successful match
-          if (!flipResponse.is_player_turn && this.difficulty !== 'None') {
+          if (!flipResponse.is_player_turn && this.currentGameMode === 'singleplayer_ai') {
             setTimeout(() => this.botMove(), this.actionDelay);
           }
+          this.isProcessingLocalAction = false;
         }
       }, this.actionDelay / 2);
     } else {
@@ -349,17 +418,25 @@ export class GameService {
               this.cardsSubject.next(this.cards);
             }
 
+            // Update turn state for multiplayer
+            if (this.currentGameMode === 'multiplayer' && response.data?.current_player) {
+              this.isPlayerTurn = response.data.current_player === this.localPlayerId;
+              console.log('[Multiplayer FinalizeMove] Current player:', response.data.current_player, '| Local player:', this.localPlayerId, '| Is my turn:', this.isPlayerTurn);
+            }
+
             // Switch turns for bot mode
-            if (this.difficulty !== 'None') {
+            if (this.currentGameMode === 'singleplayer_ai') {
               this.switchTurn();
             }
+            this.isProcessingLocalAction = false;
           },
           (error: any) => {
             console.error('Error finalizing move:', error);
             // Switch turns anyway so game continues
-            if (this.difficulty !== 'None') {
+            if (this.currentGameMode === 'singleplayer_ai') {
               this.switchTurn();
             }
+            this.isProcessingLocalAction = false;
           }
         );
       }, this.cardVisibilityDuration);
@@ -371,21 +448,30 @@ export class GameService {
    * Sends request to backend and handles win condition
    */
   checkWin(): void {
+    if (this.finishDialogShown) {
+      return;
+    }
+
     this.sessionService.checkWin().subscribe(
       (response: any) => {
         if (response.won) {
+          if (this.finishDialogShown) {
+            return;
+          }
+
+          this.finishDialogShown = true;
           this.timerService.stopTimer();
           // Use time from backend if available, otherwise use frontend timer
-          const finTime = response.time !== undefined 
+          const finTime = response.time !== undefined
             ? this.formatSeconds(response.time)
             : this.timerService.getFormattedTimer();
 
           const record = {
             date: new Date().toLocaleString(),
-            mode: this.difficulty !== 'None' ? 'Spieler vs. Bot' : 'Spieler vs. Zeit',
-            difficulty_level: this.difficulty !== 'None' ? this.difficulty : '-',
+            mode: this.currentGameMode === 'singleplayer_ai' ? 'Spieler vs. Bot' : this.currentGameMode === 'multiplayer' ? 'Spieler vs. Spieler' : 'Spieler vs. Zeit',
+            difficulty_level: this.currentGameMode === 'singleplayer_ai' ? this.difficulty : '-',
             deck_size: this.getSelectedSize(this.cards.length),
-            points: this.difficulty !== 'None' ? `${this.pairsFoundPlayer}` : '-',
+            points: this.currentGameMode === 'singleplayer_time' ? '-' : `${this.pairsFoundPlayer}`,
             rank: response.rank || '-',
             time: response.time !== undefined ? finTime : this.timerService.getFormattedTimer()
           };
@@ -396,13 +482,29 @@ export class GameService {
           modalRef.componentInstance.rank = response.rank || '-';
           modalRef.componentInstance.playerPoints = this.pairsFoundPlayer;
           modalRef.componentInstance.botPoints = this.pairsFoundBot;
-          modalRef.componentInstance.difficulty = this.difficulty;
+          modalRef.componentInstance.difficulty = this.currentGameMode === 'multiplayer' ? 'multiplayer' : this.difficulty;
 
-          if (this.difficulty !== 'None') {
+          if (this.currentGameMode === 'singleplayer_ai') {
             if (this.pairsFoundPlayer > this.pairsFoundBot) {
               modalRef.componentInstance.message = WIN_MESSAGES.playerWon;
             } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
               modalRef.componentInstance.message = WIN_MESSAGES.botWon;
+            } else {
+              modalRef.componentInstance.message = WIN_MESSAGES.draw;
+            }
+          } else if (this.currentGameMode === 'multiplayer') {
+            if (response.winner && response.winner === this.localPlayerId) {
+              if (response.finish_reason === 'player_left') {
+                modalRef.componentInstance.message = 'Glückwunsch! Du hast gewonnen, weil dein Gegner das Spiel verlassen hat!';
+              } else {
+                modalRef.componentInstance.message = WIN_MESSAGES.playerWon;
+              }
+            } else if (response.winner && response.winner !== this.localPlayerId) {
+              if (response.finish_reason === 'player_left' && response.quitter_id === this.localPlayerId) {
+                modalRef.componentInstance.message = 'Du hast das Spiel verlassen.';
+              } else {
+                modalRef.componentInstance.message = 'Schade! Dein Gegner hat gewonnen!';
+              }
             } else {
               modalRef.componentInstance.message = WIN_MESSAGES.draw;
             }
@@ -413,8 +515,25 @@ export class GameService {
           // Save record (optional - implement if needed)
           // this.http.post(`${this.apiUrl}/save-record`, record).subscribe();
 
-          this.resetGame().subscribe();
-          this.gameEnded.emit();
+          if (this.currentGameMode === 'multiplayer') {
+            this.stopMultiplayerPolling();
+
+            modalRef.result.finally(() => {
+              this.sessionService.acknowledgeFinish(this.localPlayerId).subscribe({
+                next: (ackResponse: any) => {
+                  console.log('[Multiplayer Finish Ack]', ackResponse);
+                },
+                error: (ackError: any) => {
+                  console.error('Error acknowledging multiplayer finish:', ackError);
+                }
+              });
+
+              this.gameEnded.emit();
+            });
+          } else {
+            this.resetGame().subscribe();
+            this.gameEnded.emit();
+          }
         }
       },
       (error: any) => {
@@ -439,7 +558,7 @@ export class GameService {
     this.isPlayerTurn = !this.isPlayerTurn;
     console.log('Switch turn. Player turn now: ', this.isPlayerTurn);
 
-    if (!this.isPlayerTurn && this.difficulty !== 'None') {
+    if (!this.isPlayerTurn && this.currentGameMode === 'singleplayer_ai') {
       console.log('Bot is taking a turn');
       setTimeout(() => this.botMove(), this.actionDelay);
     } else {
@@ -455,7 +574,7 @@ export class GameService {
    * Get bot's next move from backend
    */
   botMove(): void {
-    if (this.difficulty === 'None') {
+    if (this.currentGameMode !== 'singleplayer_ai') {
       this.isPlayerTurn = true;
       return;
     }
@@ -470,7 +589,7 @@ export class GameService {
 
         // Show bot cards flipped sequentially for realistic animation
         const delayBeforeSecondCard = 800; // Animation delay between flips
-        
+
         if (firstCardIdx !== undefined && secondCardIdx !== undefined) {
           // Flip first card immediately
           this.cards[firstCardIdx].flipped = true;
@@ -497,10 +616,7 @@ export class GameService {
           if (isBotMatch) {
             console.log('Bot found a pair, bot goes again');
             // Update points after successful match
-            if (response.player_points) {
-              this.pairsFoundPlayer = response.player_points['player1'] || 0;
-              this.pairsFoundBot = response.player_points['bot'] || 0;
-            }
+            this.updatePointsFromState(response.player_points);
             // Bot found a pair - bot goes again
             setTimeout(() => {
               this.checkWin();
@@ -516,11 +632,14 @@ export class GameService {
                   this.cards = finalizeResponse.data.cards;
                   this.cardsSubject.next(this.cards);
                   // Update points from finalized session state
-                  if (finalizeResponse.data.player_points) {
-                    this.pairsFoundPlayer = finalizeResponse.data.player_points['player1'] || 0;
-                    this.pairsFoundBot = finalizeResponse.data.player_points['bot'] || 0;
-                  }
+                  this.updatePointsFromState(finalizeResponse.data.player_points);
                 }
+
+                // Update turn state for multiplayer after finalize
+                if (this.currentGameMode === 'multiplayer' && finalizeResponse.data.current_player) {
+                  this.isPlayerTurn = finalizeResponse.data.current_player === this.localPlayerId;
+                }
+
                 // Switch back to player
                 setTimeout(() => {
                   this.switchTurn();
@@ -544,6 +663,104 @@ export class GameService {
         console.log('Turn restored to player after bot move failure');
       }
     );
+  }
+
+  private updatePointsFromState(playerPoints: { [key: string]: number } | undefined): void {
+    if (!playerPoints) {
+      return;
+    }
+
+    if (this.currentGameMode === 'multiplayer') {
+      this.pairsFoundPlayer = playerPoints[this.localPlayerId] || 0;
+
+      const opponentId = Object.keys(playerPoints).find((id) => id !== this.localPlayerId);
+      this.pairsFoundBot = opponentId ? playerPoints[opponentId] || 0 : 0;
+      return;
+    }
+
+    this.pairsFoundPlayer = playerPoints['player1'] || 0;
+    this.pairsFoundBot = playerPoints['bot'] || 0;
+  }
+
+  //-------------------------------------------------------------------------------------//
+  //-------------------------- Multiplayer Syncing (Polling) ---------------------------//
+  //-------------------------------------------------------------------------------------//
+
+  /**
+   * Start polling session state for multiplayer games
+   * This keeps both players in sync by fetching updates from backend
+   */
+  private startMultiplayerPolling(): void {
+    if (this.currentGameMode !== 'multiplayer') {
+      return;
+    }
+
+    // Stop any existing polling
+    this.stopMultiplayerPolling();
+
+    console.log('[Multiplayer Polling] Starting session state polling');
+
+    // Poll every 1 second
+    this.multiplayerPollingInterval = setInterval(() => {
+      // Don't poll while processing local actions to avoid conflicts
+      if (this.isProcessingLocalAction) {
+        return;
+      }
+
+      this.sessionService.getSessionState().subscribe({
+        next: (response: any) => {
+          const state = response?.data ?? response;
+          if (!state) {
+            return;
+          }
+
+          // Update cards from server state
+          this.cards = state.cards || [];
+          this.cardsSubject.next(this.cards);
+
+          // Update turn state
+          if (state.current_player) {
+            const wasMyTurn = this.isPlayerTurn;
+            this.isPlayerTurn = state.current_player === this.localPlayerId;
+
+            if (wasMyTurn !== this.isPlayerTurn) {
+              console.log('[Multiplayer Polling] Turn changed! Current player:', state.current_player, '| Is my turn:', this.isPlayerTurn);
+            }
+          }
+
+          // Update points
+          this.updatePointsFromState(state.player_points);
+
+          // Check if game finished
+          if (state.finished) {
+            console.log('[Multiplayer Polling] Game finished detected');
+            this.stopMultiplayerPolling();
+            this.checkWin();
+          }
+        },
+        error: (error: any) => {
+          console.error('[Multiplayer Polling] Error fetching session state:', error);
+        }
+      });
+    }, 1000);
+  }
+
+  /**
+   * Stop multiplayer polling
+   */
+  private stopMultiplayerPolling(): void {
+    if (this.multiplayerPollingInterval) {
+      console.log('[Multiplayer Polling] Stopping session state polling');
+      clearInterval(this.multiplayerPollingInterval);
+      this.multiplayerPollingInterval = null;
+    }
+  }
+
+  /**
+   * Public method to stop polling (called from component)
+   */
+  public stopPolling(): void {
+    this.stopMultiplayerPolling();
   }
 
   //-------------------------------------------------------------------------------------//

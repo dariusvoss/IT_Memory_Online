@@ -1,12 +1,19 @@
 <div class="xp-program-dialog">
   <div class="position-relative modal-header xp-program-header">
     <div class="container">
-      @if (this.gameService.difficultyGetter !== 'None') {
+      @if (this.gameService.gameModeGetter === 'multiplayer') {
+        <h4>Spieler vs. Spieler</h4>
+      } @else if (this.gameService.difficultyGetter !== 'None') {
         <h4>Spieler vs. Bot ({{this.gameService.difficultyGetter}})</h4>
       } @else if (this.gameService.difficultyGetter === 'None') {
         <h4>Spieler vs. Zeit</h4>
       }
-      @if (this.gameService.difficultyGetter !== 'None' ) {
+      @if (this.gameService.gameModeGetter === 'multiplayer') {
+        <div class="item">
+          <b>Am Zug ist:</b>
+          {{isPlayerTurn ? 'Du' : 'Gegner'}}
+        </div>
+      } @else if (this.gameService.difficultyGetter !== 'None' ) {
         <div class="item">
           <b>Am Zug ist:</b>
           {{isPlayerTurn ? 'Spieler' : 'Bot'}}
@@ -24,7 +31,9 @@
     </div>
   </div>
 
-  @if (gameService.difficultyGetter !== 'None') {
+  @if (gameService.gameModeGetter === 'multiplayer') {
+    <p>Spiele gegen einen anderen Spieler und finde mehr Paare als dein Gegner!</p>
+  } @else if (gameService.difficultyGetter !== 'None') {
     <p>Spiele gegen den Computer und versuche, die meisten Paare zu finden!</p>
   } @else if (this.gameService.difficultyGetter === 'None') {
     <p>Finde alle Paare so schnell wie möglich!</p>
@@ -36,14 +45,14 @@
   </div>
 
   <div class="modal-footer xp-program-footer" >
-    @if(gameService.difficultyGetter !== 'None') {
+    @if(gameService.gameModeGetter !== 'singleplayer_time') {
       <div class="container" >
         <b>Aufgedeckte Paare:</b>
         <div>
-          Spieler : {{playerPoints}}
+          {{gameService.gameModeGetter === 'multiplayer' ? 'Du' : 'Spieler'}} : {{playerPoints}}
         </div>
         <div class="center">
-          Bot : {{botPoints}}
+          {{gameService.gameModeGetter === 'multiplayer' ? 'Gegner' : 'Bot'}} : {{botPoints}}
         </div>
       </div>
     }

@@ -14,6 +14,8 @@ import { Subscription } from 'rxjs';
 })
 export class GameDialogComponent implements OnInit, OnDestroy {
   @Input() mode: string = ''; // Spielmodus als Eingabeparameter
+  @Input() sessionId: string = '';
+  @Input() sessionData: any;
   gameService = inject(GameService);
   private timer: TimerService = inject(TimerService);
   private currentTime: number = 0;
@@ -23,12 +25,19 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   constructor(public activeModal: NgbActiveModal) {}
 
   ngOnInit() {
-    if (this.mode === 'PvT') {
+    if (this.sessionId) {
+      this.gameService.initializeMultiplayerSession(this.sessionId, this.sessionData).subscribe({
+        next: () => console.log('Multiplayer session loaded:', this.sessionId),
+        error: (error) => console.error('Error loading multiplayer session:', error)
+      });
+    }
+
+    if (this.mode === 'PvT' || this.gameService.gameModeGetter === 'singleplayer_time') {
       this.timer.getTimer().subscribe(time => this.currentTime = time); // Subscribe to the timer observable
     }
 
     this.gameEndedSubscription = this.gameService.gameEnded.subscribe(() => {
-      this.closeModal();
+      this.closeModal('game-ended');
     });
   }
 
@@ -36,6 +45,8 @@ export class GameDialogComponent implements OnInit, OnDestroy {
     if (this.gameEndedSubscription) {
       this.gameEndedSubscription.unsubscribe();
     }
+    // Stop multiplayer polling when dialog is closed
+    this.gameService.stopPolling();
   }
 
   get time(): string {
@@ -65,8 +76,8 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   }
 
 
-  closeModal() {
+  closeModal(reason: string = 'closed') {
     this.timer.stopTimer();
-    this.activeModal.close();
+    this.activeModal.close(reason);
   }
 }

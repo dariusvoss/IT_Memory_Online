@@ -214,6 +214,33 @@ export class SessionService {
   }
 
   /**
+   * Acknowledge that player has seen finish dialog.
+   * Backend cleans multiplayer session/match when both players acknowledged.
+   */
+  acknowledgeFinish(playerId: string): Observable<any> {
+    if (!this.currentSessionId) {
+      throw new Error('No active session');
+    }
+
+    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/finish-ack`, {
+      player_id: playerId
+    });
+  }
+
+  /**
+   * Leave an active multiplayer session.
+   */
+  leaveSession(playerId: string): Observable<any> {
+    if (!this.currentSessionId) {
+      throw new Error('No active session');
+    }
+
+    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/leave`, {
+      player_id: playerId
+    });
+  }
+
+  /**
    * Get current session ID
    */
   getCurrentSessionId(): string | null {

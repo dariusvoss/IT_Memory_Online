@@ -30,10 +30,10 @@ export class AppComponent implements OnInit {
     this.playerIdService.getPlayerId().subscribe({
       next: (playerId) => {
         environment.playerId = playerId;
-        console.log('Player ID initialized:', playerId);
+        console.log('[AppComponent] Player ID initialized:', playerId);
       },
       error: (err) => {
-        console.error('Failed to initialize player ID:', err);
+        console.error('[AppComponent] Failed to initialize player ID:', err);
       }
     });
 

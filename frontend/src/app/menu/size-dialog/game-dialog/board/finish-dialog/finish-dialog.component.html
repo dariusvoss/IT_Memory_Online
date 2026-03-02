@@ -15,7 +15,11 @@
     }
     @if (playerPoints !== undefined && botPoints !== undefined) {
       <div>
-        @if (difficulty !== 'None') {
+        @if (difficulty === 'multiplayer') {
+          <div>
+            Deine Punkte: <strong>{{ playerPoints }}</strong><br>Gegner-Punkte: <strong>{{ botPoints }}</strong>
+          </div>
+        } @else if (difficulty !== 'None') {
           <div>
             Spieler-Punkte: <strong>{{ playerPoints }}</strong><br>Bot-Punkte: <strong>{{ botPoints }}</strong>
           </div>

@@ -23,8 +23,24 @@
     <app-menu></app-menu>
   </div>
 
+  <!-- Multiplayer: Active Session Menu -->
+  <div *ngIf="selectedMode === 'multiplayer' && multiplayerState === 'active'" class="menu-container">
+    <button class="back-button" (click)="goBack()">← Zurück</button>
+    <div class="loading-screen">
+      <h2>Aktive PvP-Runde</h2>
+      <div class="button-group">
+        <button class="btn btn-secondary" (click)="openBoardDialog(activeSessionId!, activeSessionData)">
+          Spiel fortsetzen
+        </button>
+        <button class="btn btn-primary" (click)="leaveActiveGame()">
+          Spiel verlassen
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Multiplayer: Loading Screen -->
-  <div *ngIf="selectedMode === 'multiplayer'" class="loading-container">
+  <div *ngIf="selectedMode === 'multiplayer' && multiplayerState === 'searching'" class="loading-container">
     <button class="back-button" (click)="goBack()">← Zurück</button>
     <div class="loading-screen">
       <h2>LOADING...</h2>
