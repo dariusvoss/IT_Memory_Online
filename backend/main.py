@@ -249,7 +249,7 @@ def bot_move(session_id: str = Path(...)):
     
     if session.game_mode != GameMode.SINGLEPLAYER_AI:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Bot moves only available in SINGLEPLAYER_AI mode. Current mode: {session.game_mode.value}"
         )
     
@@ -537,7 +537,7 @@ def get_analysis(session_id: str = Path(...)):
 def get_active_sessions():
     """Get all active sessions (for debug/admin)"""
     sessions = []
-    for session_id, session in session_manager.sessions.items():
+    for session_id, session in list(session_manager.sessions.items()):
         summary = session_manager.get_session_summary(session_id)
         if summary:
             sessions.append(summary)
@@ -561,7 +561,7 @@ def cleanup_sessions():
 @app.get("/api/admin/active-matches")
 def get_active_matches():
     """Gibt alle laufenden Matches zurück"""
-    active_matches = matchmaker.get_active_matches()  
+    active_matches = matchmaker.get_active_matches()
     return {"active_matches": [match.to_dict() for match in active_matches]}
 
 # ========================= Helper Functions =========================
@@ -618,7 +618,7 @@ def join_queue(data: dict):
     deck_size = data.get("deck_size")  # <– neu
     if matchmaker.join_queue(player_id, deck_size):
         return {
-            "status": "joined", 
+            "status": "joined",
             "queue_size": matchmaker.get_queue_size(),
             "player_deck_size": matchmaker.player_deck_size.get(player_id)
             }

@@ -567,11 +567,17 @@ class GameSession:
         Start the game session.
         Changes status from WAITING to ACTIVE and sets start time.
         """
-        if self.status != GameStatus.WAITING:
-            raise ValueError(f"Cannot start game with status: {self.status}")
-        
-        self.status = GameStatus.ACTIVE
-        self.started_at = datetime.now()
+        if self.status == GameStatus.WAITING:
+            self.status = GameStatus.ACTIVE
+            self.started_at = datetime.now()
+            return
+
+        # Idempotent behavior: repeated start requests for an already active game
+        # should not fail (e.g. multiplayer clients starting nearly at the same time).
+        if self.status == GameStatus.ACTIVE:
+            return
+
+        raise ValueError(f"Cannot start game with status: {self.status}")
     
     def reset_game(self) -> None:
         """

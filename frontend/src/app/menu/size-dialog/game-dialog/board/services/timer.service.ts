@@ -74,6 +74,22 @@ export class TimerService {
     }
   }
 
+  /**
+   * Reset timer locally without backend call
+   * Used when session is being deleted
+   */
+  resetTimerLocal() {
+    if (this.intervalSubscription) {
+      this.isTimerRunning = false;
+      this.intervalSubscription.unsubscribe();
+      this.intervalSubscription = null;
+    }
+    this.secondsElapsed = 0;
+    this.timer$.next(this.secondsElapsed);
+    this.sessionId = '';
+    console.log('Timer reset locally');
+  }
+
   getTimer() {
     return this.timer$.asObservable();
   }

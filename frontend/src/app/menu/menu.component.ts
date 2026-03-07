@@ -30,9 +30,9 @@ export class MenuComponent {
   }
 
   restartDialog() {
-    this.gameService.resetGame().subscribe(
-      () => console.log('Game restarted'),
-      error => console.error('Error restarting game:', error)
+    this.gameService.deleteSessionAndResetState().subscribe(
+      () => console.log('Session deleted and game restarted from menu'),
+      error => console.error('Error deleting session and restarting game:', error)
     );
   }
 

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MenuComponent } from '../menu.component';
@@ -9,6 +9,7 @@ import { SizeDialogComponent } from '../size-dialog/size-dialog.component';
 import { GameDialogComponent } from '../size-dialog/game-dialog/game-dialog.component';
 import { MatchFoundDialogComponent } from './match-found-dialog/match-found-dialog.component';
 import { SessionService } from '../size-dialog/game-dialog/board/services/session.service';
+import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
 
 @Component({
   selector: 'app-mode-selection',
@@ -24,6 +25,7 @@ export class GameModeSelectionComponent {
   pollingInterval: ReturnType<typeof setInterval> | undefined;
   activeSessionId: string | null = null;
   activeSessionData: any = null;
+  private gameService = inject(GameService);
 
   constructor(
     private http: HttpClient,
@@ -47,6 +49,7 @@ export class GameModeSelectionComponent {
           this.startMatchmakingPolling(environment.playerId);
         }
       }).catch((error) => {
+        // this.chooseSize();
         console.log('SizeDialog dismissed');
       });
     }
@@ -70,8 +73,8 @@ export class GameModeSelectionComponent {
           this.activeSessionData = res.session;
 
           // Zeige Match-Found-Dialog
-          // this.showMatchFoundDialog(res.game_session_id, res.opponent);
-          this.openBoardDialog(res.game_session_id, res.session);
+          this.showMatchFoundDialog(res.game_session_id, res.opponent);
+          // this.openBoardDialog(res.game_session_id, res.session);
         } else if (res.status === 'waiting') {
           this.multiplayerState = 'searching';
         } else if (res.status === 'not_in_queue') {
@@ -112,6 +115,12 @@ export class GameModeSelectionComponent {
   }
 
   selectSingleplayer(): void {
+    this.clearActiveMultiplayerState();
+    // Also reset GameService state to clear any remaining game board from previous multiplayer session
+    this.gameService.deleteSessionAndResetState().subscribe(
+      () => console.log('GameService reset for singleplayer mode'),
+      error => console.error('Error resetting game service:', error)
+    );
     this.selectedMode = 'singleplayer';
   }
 

@@ -5,7 +5,7 @@ import { SessionService } from './session.service';
 import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { tap, map } from 'rxjs/operators';
+import { tap, map, mergeMap, catchError, finalize } from 'rxjs/operators';
 import { environment } from '../../../../../../environments/environment';
 
 type GameModeType = 'singleplayer_time' | 'singleplayer_ai' | 'multiplayer';
@@ -123,6 +123,7 @@ export class GameService {
   /**
    * Initialize a new game with the specified card count
    * Creates a session and starts the game
+   * Closes any existing session before creating a new one
    */
   initializeGame(cardCount: number): Observable<any> {
     // Determine game mode based on difficulty
@@ -133,13 +134,38 @@ export class GameService {
 
     this.currentGameMode = gameMode;
 
-    // Create session with current settings
-    return this.sessionService.createSession(
-      ['player1'], // Player ID
-      this.difficulty,
-      cardCount,
-      gameMode
-    ).pipe(
+    // If there's an existing session, delete it first before creating a new one
+    let deleteObservable: Observable<any>;
+    if (this.sessionId) {
+      console.log('Existing session found:', this.sessionId, '- Deleting before creating new session');
+      deleteObservable = this.sessionService.deleteSession();
+    } else {
+      // If no existing session, just return an empty observable
+      deleteObservable = of(null);
+    }
+
+    // Chain: Delete old session → Create new session
+    return deleteObservable.pipe(
+      mergeMap(() => {
+        console.log('Old session deleted, creating new session');
+        // Create session with current settings
+        return this.sessionService.createSession(
+          ['player1'], // Player ID
+          this.difficulty,
+          cardCount,
+          gameMode
+        );
+      }),
+      catchError((error: any) => {
+        console.error('Error during session initialization:', error);
+        // If delete fails, still try to create new session
+        return this.sessionService.createSession(
+          ['player1'],
+          this.difficulty,
+          cardCount,
+          gameMode
+        );
+      }),
       tap((response: any) => {
         if (response.data) {
           const sessionData = response.data;
@@ -229,15 +255,68 @@ export class GameService {
         this.gameStarted = false;
         this.gameInitialized = false;  // Reset the game initialization flag
         this.isPlayerTurn = true;
-        this.timerService.resetTimer();
+        if (this.gameModeGetter === 'singleplayer_time') {
+          this.timerService.resetTimer();
+        }
         this.difficulty = 'Leicht';
+        if (this.gameModeGetter === 'multiplayer') {
+          this.stopMultiplayerPolling();
+        }
         this.currentGameMode = 'singleplayer_time';
-        this.stopMultiplayerPolling();
         this.finishDialogShown = false;
 
         console.log('Game reset');
       })
     );
+  }
+
+  /**
+   * Delete the current session and reset local state.
+   * Used when user clicks "Neues Spiel starten" from menu.
+   * Gracefully handles 404 errors (session already deleted or doesn't exist).
+   */
+  deleteSessionAndResetState(): Observable<any> {
+    const hasSession = !!this.sessionService.getCurrentSessionId();
+    const deleteRequest = hasSession ? this.sessionService.deleteSession() : of(null);
+
+    return deleteRequest.pipe(
+      catchError(error => {
+        // Gracefully handle 404 or other errors - still reset local state
+        console.warn('Error deleting session (may not exist):', error.status);
+        return of(null); // Continue with state reset
+      }),
+      finalize(() => {
+        // Always reset local state, regardless of delete success
+        this.resetLocalState();
+
+        console.log('Game state reset');
+      })
+    );
+  }
+
+  private resetLocalState(): void {
+    this.cards = [];
+    this.cardsSubject.next([]);
+
+    this.selectedCards = [];
+    this.pairsFound = 0;
+    this.pairsFoundPlayer = 0;
+    this.pairsFoundBot = 0;
+    this.gameStarted = false;
+    this.gameInitialized = false;
+    this.isPlayerTurn = true;
+    if (this.gameModeGetter === 'singleplayer_time') {
+      this.timerService.resetTimerLocal();
+    }
+    this.difficulty = 'Leicht';
+    if (this.gameModeGetter === 'multiplayer') {
+      this.stopMultiplayerPolling();
+    }
+    this.finishDialogShown = false;
+    this.lastFlipResponse = null;
+    this.sessionId = '';
+    this.currentGameMode = 'singleplayer_time';
+    console.log('Local game state reset');
   }
 
   /**
@@ -264,7 +343,7 @@ export class GameService {
     }
 
     // Start game on first card flip (only once)
-    if (this.selectedCards.length === 1 && !this.gameInitialized) {
+    if (this.currentGameMode === 'singleplayer_time' && this.selectedCards.length === 1 && !this.gameInitialized) {
       this.gameInitialized = true;  // Mark game as initialized
       this.sessionService.startGame().subscribe(
         (response: any) => {
@@ -519,16 +598,20 @@ export class GameService {
             this.stopMultiplayerPolling();
 
             modalRef.result.finally(() => {
+              // Acknowledge finish; backend performs multiplayer cleanup when both players acknowledged.
               this.sessionService.acknowledgeFinish(this.localPlayerId).subscribe({
                 next: (ackResponse: any) => {
                   console.log('[Multiplayer Finish Ack]', ackResponse);
+                  this.resetLocalState();
+                  this.gameEnded.emit();
                 },
                 error: (ackError: any) => {
                   console.error('Error acknowledging multiplayer finish:', ackError);
+                  // Even if ack fails, still reset local state
+                  this.resetLocalState();
+                  this.gameEnded.emit();
                 }
               });
-
-              this.gameEnded.emit();
             });
           } else {
             this.resetGame().subscribe();

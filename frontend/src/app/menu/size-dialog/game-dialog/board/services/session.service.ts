@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../../../../../../environments/environment';
 
 export interface GameSessionState {
@@ -209,6 +209,10 @@ export class SessionService {
         this.sessionIdSubject.next(null);
         this.sessionStateSubject.next(null);
         console.log('Session deleted:', sessionId);
+      }),
+      catchError((error) => {
+        console.error('Error deleting session:', error);
+        throw error;
       })
     );
   }
