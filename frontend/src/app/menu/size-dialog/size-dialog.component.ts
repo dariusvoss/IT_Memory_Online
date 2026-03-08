@@ -8,11 +8,11 @@ import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
     styleUrl: './size-dialog.component.css'
 })
 export class SizeDialogComponent {
-  private selectedCardCount: number = 16; // Standardgröße
+  private selectedCardCount: number = 16; // standard size
   constructor(public activeModal: NgbActiveModal) {}
 
   selectSize(cardCount: number) {
     this.selectedCardCount = cardCount;
-    this.activeModal.close(this.selectedCardCount);  // Schließen des Modals und Rückgabe der Anzahl der Karten
+    this.activeModal.close(this.selectedCardCount);  // Close the modal and return the number of cards
   }
 }

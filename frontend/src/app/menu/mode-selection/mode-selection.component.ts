@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { MenuComponent } from '../menu.component';
@@ -21,11 +21,13 @@ import { GameService } from '../size-dialog/game-dialog/board/services/game.serv
 export class GameModeSelectionComponent {
   selectedMode: 'none' | 'singleplayer' | 'multiplayer' = 'none';
   multiplayerState: 'idle' | 'searching' | 'active' = 'idle';
-  private selectedSize: number = -1; // Standardgröße
+  private selectedSize: number = -1; // Standard size
   pollingInterval: ReturnType<typeof setInterval> | undefined;
   activeSessionId: string | null = null;
   activeSessionData: any = null;
   private gameService = inject(GameService);
+
+  @Output() selectedModeChange = new EventEmitter<'none' | 'singleplayer' | 'multiplayer'>();
 
   constructor(
     private http: HttpClient,
@@ -72,7 +74,7 @@ export class GameModeSelectionComponent {
           this.activeSessionId = res.game_session_id;
           this.activeSessionData = res.session;
 
-          // Zeige Match-Found-Dialog
+          // Show Match-Found dialog
           this.showMatchFoundDialog(res.game_session_id, res.opponent);
           // this.openBoardDialog(res.game_session_id, res.session);
         } else if (res.status === 'waiting') {
@@ -106,6 +108,7 @@ export class GameModeSelectionComponent {
     if (result === 'game-ended') {
       this.clearActiveMultiplayerState();
       this.selectedMode = 'none';
+      this.selectedModeChange.emit(this.selectedMode);
       return;
     }
 
@@ -122,10 +125,12 @@ export class GameModeSelectionComponent {
       error => console.error('Error resetting game service:', error)
     );
     this.selectedMode = 'singleplayer';
+    this.selectedModeChange.emit(this.selectedMode);
   }
 
   selectMultiplayer(): void {
     this.selectedMode = 'multiplayer';
+    this.selectedModeChange.emit(this.selectedMode);
     this.checkMultiplayerState();
   }
 
@@ -163,6 +168,7 @@ export class GameModeSelectionComponent {
         console.log('Left active multiplayer game:', response);
         this.clearActiveMultiplayerState();
         this.selectedMode = 'none';
+        this.selectedModeChange.emit(this.selectedMode);
       },
       error: (err) => {
         console.error('Error leaving active multiplayer game:', err);
@@ -184,6 +190,7 @@ export class GameModeSelectionComponent {
     }
 
     this.selectedMode = 'none';
+    this.selectedModeChange.emit(this.selectedMode);
   }
 
   private clearActiveMultiplayerState(): void {
@@ -208,11 +215,11 @@ export class GameModeSelectionComponent {
 
     modalRef.result.then((result) => {
       if (result) {
-        // Join-Button wurde geklickt
+        // Join the game session and open the game dialog
         this.openBoardDialog(result);
       }
     }).catch((error) => {
-      // Dialog wurde abgelehnt
+      // Dialog was declined
       console.log('Match declined');
     });
   }

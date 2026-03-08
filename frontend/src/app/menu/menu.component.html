@@ -1,9 +1,3 @@
-<!--
-  TODO:
-    - Reshape visual elements in Bootstrap card for mode "Spieler vs. Bot" to make them appear in one line for any screen size
-    - Add visual elements to Bootstrap card for mode "Spieler vs. Zeit"
--->
-
 <div class="menu-container">
   <div class="d-grid gap-2" style="width: 80%">
     <div class="d-grid gap-0" style="width: 80%">
@@ -11,7 +5,7 @@
         <p style="text-align: center; margin-bottom: 10px;">Wähle einen Spielmodus:</p>
         <div class="row justify-content-center">
           <div class="col justify-content-center">
-            <!-- Wenn noch kein Spieldurchlauf gestartet wurde -->
+            <!-- Shown when no game has started -->
             <div class="card difficulty-card" (click)="configurePlaythrough('PvB')">
               <div class="card-body text-center">
                 <h5 class="card-title xp-header">Spieler vs. Bot</h5>
@@ -65,7 +59,7 @@
         </div>
       } @else if (gameService.gameStarted) {
         <div class="d-grid gap-0" style="width: 100%; margin-top: 5px">
-        <!-- Wenn ein Spieldurchlauf bereits gestartet wurde -->
+        <!-- Shown when a game has already started -->
           <button type="button" class="btn xp-btn" (click)="resumeDialog()">Spiel fortsetzen</button>
           <button type="button" class="btn xp-btn" (click)="restartDialog()">Neues Spiel starten</button>
         </div>

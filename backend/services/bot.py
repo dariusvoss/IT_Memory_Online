@@ -12,9 +12,10 @@ class BotAI:
     
     def set_difficulty(self, difficulty: str) -> None:
         """Set bot difficulty level"""
-        if difficulty not in ['Leicht', 'Mittel', 'Schwer']:
+        if difficulty in {'Leicht', 'Mittel', 'Schwer'}:
+            self.difficulty = difficulty
+        else:
             raise ValueError(f"Invalid difficulty: {difficulty}")
-        self.difficulty = difficulty
     
     def initialize(self, card_count: int) -> None:
         """Initialize bot for a game"""
@@ -144,17 +145,14 @@ class BotAI:
         Returns:
             Tuple of (first_index, second_index)
         """
-        # Try to find a known matching pair
-        pair = self.find_known_pair()
-        
-        if pair:
+        if pair := self.find_known_pair():
             first_idx, second_idx = pair
             available_indices = [idx for idx, _ in available_cards]
-            
+
             # Check if both cards of the pair are still available
             if first_idx in available_indices and second_idx in available_indices:
                 return (first_idx, second_idx)
-        
+
         # Fall back to random move if no known pair found
         return self._decide_random_move(available_cards)
 

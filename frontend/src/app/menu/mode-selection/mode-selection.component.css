@@ -17,11 +17,11 @@
 
 .button-group {
   display: flex;
-  flex-direction: column;    /* untereinander */
-  gap: 2rem;
+  flex-direction: column;
+  gap: 0.5rem;
   justify-content: center;
-  width: 100%;               /* optional: volle Breite */
-  max-width: 400px;          /* o. ä. */
+  width: 100%;               /* optional: full width */
+  max-width: 400px;          /* or similar */
 }
 
 /* Menu Container */

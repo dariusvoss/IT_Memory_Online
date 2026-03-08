@@ -28,17 +28,16 @@ def get_records_file_path() -> str:
 
 def format_time(seconds: int) -> str:
     """Format seconds to MM:SS format"""
-    minutes = seconds // 60
-    secs = seconds % 60
+    minutes, secs = divmod(seconds, 60)
     return f"{minutes}:{secs:02d}"
 
 def validate_card_count(count: int) -> bool:
     """Validate card count"""
-    return count in [16, 36, 64]
+    return count in {16, 36, 64}
 
 def validate_difficulty(difficulty: str) -> bool:
     """Validate difficulty level"""
-    return difficulty in ['Leicht', 'Mittel', 'Schwer', 'None']
+    return difficulty in {'Leicht', 'Mittel', 'Schwer', 'None'}
 
 def get_deck_size_text(card_count: int) -> str:
     """Get human-readable deck size text"""

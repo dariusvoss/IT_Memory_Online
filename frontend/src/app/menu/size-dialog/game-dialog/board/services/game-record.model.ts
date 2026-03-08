@@ -1,14 +1,14 @@
 /**
- * Interface für Spielaufzeichnungen (Game Records)
- * Speichert alle relevanten Daten eines abgeschlossenen Spieldurchlaufs
+ * Interface for Game Records
+ * Stores all relevant data of a completed game session
  */
 export interface GameRecord {
-  date: string;                    // Datum und Uhrzeit des Spielendes
-  mode: 'Spieler vs. Bot' | 'Spieler vs. Zeit' | 'Multiplayer';  // Spielmodus
-  difficultyLevel: string;         // Schwierigkeitsgrad (nur bei PvB, sonst "-")
-  deckSize: string;                // Kartensatzgröße (z.B. "Klein (16 Karten)")
-  points: string | number;         // Punkte/Paare (PvB & Multiplayer) oder "-"
-  rank: string;                    // Rang (nur bei PvT: A-E), sonst "-"
-  time: string;                    // Zeit im Format MM:SS (nur bei PvT), sonst "-"
-  result: string;                  // Endergebnis: "Sieg" | "Niederlage" | "Unentschieden" (nur bei PvB & Multiplayer), sonst "-"
+  date: string;                    // Date and time of game end
+  mode: 'Spieler vs. Bot' | 'Spieler vs. Zeit' | 'Multiplayer';  // Game mode
+  difficultyLevel: string;         // Difficulty level (only for PvB, otherwise "-")
+  deckSize: string;                // Deck size (e.g., "Small (16 cards)")
+  points: string | number;         // Points/pairs (PvB & Multiplayer) or "-"
+  rank: string;                    // Rank (only for PvT: A-E), otherwise "-"
+  time: string;                    // Time in MM:SS format (only for PvT), otherwise "-"
+  result: string;                  // Final result: "Win" | "Loss" | "Draw" (only for PvB & Multiplayer), otherwise "-"
 }

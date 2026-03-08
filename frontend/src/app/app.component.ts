@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
 import { PlayerIdService } from './menu/size-dialog/game-dialog/board/services/player-id.service';
 import { GameService } from './menu/size-dialog/game-dialog/board/services/game.service';
 import { GameModeSelectionComponent } from './menu/mode-selection/mode-selection.component';
@@ -16,6 +15,7 @@ import { HttpClient } from '@angular/common/http';
 export class AppComponent implements OnInit {
   title = 'IT-Memory';
   playerID = '';
+  containerWidth: number = 40; // Default 40% for main menu
 
 
   constructor(private playerIdService: PlayerIdService,
@@ -37,5 +37,14 @@ export class AppComponent implements OnInit {
       }
     });
 
+  }
+
+  onModeChanged(mode: 'none' | 'singleplayer' | 'multiplayer'): void {
+    // Adjust container width based on current mode
+    if (mode === 'singleplayer') {
+      this.containerWidth = 70; // 70% for singleplayer with multiple cards
+    } else {
+      this.containerWidth = 40; // 40% for main menu or multiplayer
+    }
   }
 }

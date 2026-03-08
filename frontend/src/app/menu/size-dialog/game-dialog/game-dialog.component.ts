@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./game-dialog.component.css']
 })
 export class GameDialogComponent implements OnInit, OnDestroy {
-  @Input() mode: string = ''; // Spielmodus als Eingabeparameter
+  @Input() mode: string = ''; // Game mode as entry parameter
   @Input() sessionId: string = '';
   @Input() sessionData: any;
   gameService = inject(GameService);

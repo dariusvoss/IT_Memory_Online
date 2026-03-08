@@ -10,12 +10,12 @@ import { ScoreboardComponent } from '../../../../scoreboard/scoreboard.component
   styleUrls: ['./finish-dialog.component.css']
 })
 export class FinishDialogComponent {
-  @Input() time: string = ''; // Zeit, die der Spieler zum Finden aller Paare benötigt hat 
-  @Input() rank: string = ''; // Rang, den der Spieler mit seiner Zeit erreicht hat
-  @Input() playerPoints: number = 0; // Punkte des Spielers
-  @Input() botPoints: number = 0; // Punkte des Bots
-  @Input() difficulty: string = ''; // Schwierigkeitsgrad
-  @Input() message: string = ''; // Nachricht an den Spieler
+  @Input() time: string = ''; // Time taken by player to find all pairs 
+  @Input() rank: string = ''; // Rank achieved by player (A-E) based on their time
+  @Input() playerPoints: number = 0; // Player's points
+  @Input() botPoints: number = 0; // Bot's points
+  @Input() difficulty: string = ''; // Difficulty level
+  @Input() message: string = ''; // Message to the player
 
   constructor(public activeModal: NgbActiveModal, private modalService: NgbModal) {}
 

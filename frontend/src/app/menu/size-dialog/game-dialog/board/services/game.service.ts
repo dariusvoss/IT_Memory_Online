@@ -47,8 +47,8 @@ export class GameService {
   private pairsFoundPlayer = 0;
   private pairsFoundBot = 0;
   private difficulty: 'Leicht' | 'Mittel' | 'Schwer' | 'None' = 'Leicht';
-  private actionDelay = 800;  // Verzögerung zwischen Aktionen (Bot-Zug, Spielerwechsel)
-  private cardVisibilityDuration = 1200;  // Wie lange Karten sichtbar bleiben, bevor sie umgedreht werden
+  private actionDelay = 800;  // Delay between actions (Bot turn, player switch)
+  private cardVisibilityDuration = 1200;  // How long cards remain visible before being flipped back
   private lastFlipResponse: any = null;
 
   private cards: GameCard[] = [];
@@ -58,7 +58,7 @@ export class GameService {
   private isProcessingLocalAction: boolean = false;
   private finishDialogShown: boolean = false;
 
-  // Observable für UI Updates
+  // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
   public cards$ = this.cardsSubject.asObservable();
 
@@ -659,7 +659,6 @@ export class GameService {
         return 'Unentschieden';
       }
     } else {
-      // Singleplayer vs. Zeit
       return '-';
     }
   }
@@ -701,7 +700,7 @@ export class GameService {
         const isBotMatch = move.is_pair || false;
 
         // Show bot cards flipped sequentially for realistic animation
-        const delayBeforeSecondCard = 800; // Animation delay between flips
+        const delayBeforeSecondCard = 800;
 
         if (firstCardIdx !== undefined && secondCardIdx !== undefined) {
           // Flip first card immediately
