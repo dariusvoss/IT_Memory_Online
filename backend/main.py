@@ -742,26 +742,6 @@ def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
         "message": "Waiting for other player acknowledgement"
     }
 
-# ========================= Player ID Routes =========================
-
-@app.get("/api/player/create-id")
-def create_player_id():
-    """Create a new player ID"""
-    player_id = str(uuid.uuid4())
-    
-    return {
-        "player_id": player_id,
-        "status": "created"
-    }
-
-@app.get("/api/player/verify-id")
-def verify_player_id(request: Request):
-    """Verify existing player ID from cookie"""
-    if player_id := request.cookies.get("player_id"):
-        return {"player_id": player_id, "status": "exists"}
-
-    raise HTTPException(status_code=401, detail="Player ID not found")
-
 
 # ========================= Error Handlers =========================
 
