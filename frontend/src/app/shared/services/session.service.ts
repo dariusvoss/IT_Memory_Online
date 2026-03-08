@@ -51,10 +51,14 @@ export class SessionService {
 
     return this.http.post(`${this.apiUrl}/create`, request).pipe(
       tap((response: any) => {
-        if (response.data && response.data.session_id) {
-          this.currentSessionId = response.data.session_id;
-          this.sessionIdSubject.next(response.data.session_id);
-          this.sessionStateSubject.next(response.data);
+        const sessionId = response.session_id;
+        const state = response.data;
+        if (sessionId) {
+          this.currentSessionId = sessionId;
+          this.sessionIdSubject.next(sessionId);
+          if (state) {
+            this.sessionStateSubject.next(state);
+          }
           console.log('Session created:', this.currentSessionId);
         }
       })

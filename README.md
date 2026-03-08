@@ -6,7 +6,7 @@ Ein interaktives Memory-Spiel mit Multiplayer-Unterstützung, entwickelt mit Ang
 
 - **Einzelspielermodus**: Spielen Sie gegen die Uhr und verbessern Sie Ihre Bestzeiten
 - **Multiplayermodus**: Spielen Sie live gegen andere Spieler mit automatischem Matchmaking
-- **Mehrere Schwierigkeitsstufen**: Wählen Sie zwischen verschiedenen Spielfeldgrößen und Schwierigkeitsstufen
+- **Mehrere Schwierigkeitsstufen**: Wählen Sie zwischen verschiedenen Spielfeldgrößen und Spielmodi
 - **Echtzeit-Spielsitzungen**: Live-Updates und Synchronisation zwischen Spielern
 - **Scoreboard**: Verfolgen Sie Ihre Erfolge und Spielstatistiken
 - **Responsive Design**: Optimierte Benutzeroberfläche für verschiedene Bildschirmgrößen
@@ -128,8 +128,8 @@ Die Anwendung öffnet sich automatisch im Browser unter `http://localhost:4200`.
 
 ### Frontend (Angular)
 
-- Component-basierte Architektur
-- Services für Kommunikation mit dem Backend
+- komponentenbasierte Architektur
+- Services für die Kommunikation mit dem Backend
 - Bootstrap für responsive Design
 - TypeScript für typsichere Entwicklung
 
@@ -167,4 +167,4 @@ Dieses Projekt ist lizenziert unter der MIT License.
 
 ## Kontakt
 
-Für Fragen oder Suggestions kontaktieren Sie den Projektverantwortlichen.
+Für Fragen oder Vorschläge kontaktieren Sie den Projektverantwortlichen.

@@ -10,7 +10,7 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./match-found-dialog.component.css']
 })
 export class MatchFoundDialogComponent {
-  @Input() opponentName: string = 'Opponent';
+  @Input() opponentIds: string[] = [];
   @Input() gameSessionId: string = '';
 
   constructor(public activeModal: NgbActiveModal) {}

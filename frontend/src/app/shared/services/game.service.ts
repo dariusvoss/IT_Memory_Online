@@ -152,7 +152,7 @@ export class GameService {
         console.log('Old session deleted, creating new session');
         // Create session with current settings
         return this.sessionService.createSession(
-          ['player1'], // Player ID
+          [this.localPlayerId], // Player ID
           this.difficulty,
           cardCount,
           gameMode
@@ -162,7 +162,7 @@ export class GameService {
         console.error('Error during session initialization:', error);
         // If delete fails, still try to create new session
         return this.sessionService.createSession(
-          ['player1'],
+          [this.localPlayerId],
           this.difficulty,
           cardCount,
           gameMode

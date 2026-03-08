@@ -208,10 +208,10 @@ export class GameModeSelectionComponent {
     this.modalService.open(ScoreboardComponent, { size: 'lg', centered: true });
   }
 
-  showMatchFoundDialog(sessionId: string, opponentId: string) {
+  showMatchFoundDialog(sessionId: string, opponentIds: string[]) {
     const modalRef = this.modalService.open(MatchFoundDialogComponent, { centered: true, backdrop: 'static' });
     modalRef.componentInstance.gameSessionId = sessionId;
-    modalRef.componentInstance.opponentName = opponentId;
+    modalRef.componentInstance.opponentIds = opponentIds;
 
     modalRef.result.then((result) => {
       if (result) {
