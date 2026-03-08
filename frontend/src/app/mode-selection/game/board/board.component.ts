@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, HostListener, ElementRef, OnDestroy } from '@angular/core';
-import { GameService } from './services/game.service';
+import { GameService } from '../../../shared/services/game.service';
 import { MemoryCardComponent } from './memory-card/memory-card.component';
 import { CommonModule } from '@angular/common';
-import { TimerService } from './services/timer.service';
+import { TimerService } from '../../../shared/services/timer.service';
 import { GameDialogComponent } from '../game-dialog.component';
 import { Subscription } from 'rxjs';
 

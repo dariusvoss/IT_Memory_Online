@@ -1,15 +1,15 @@
 import { Component, inject, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { MenuComponent } from '../menu.component';
-import { environment } from '../../../environments/environment';
-import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
+import { MenuComponent } from './menu/menu.component';
+import { environment } from '../../environments/environment';
+import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap/modal';
-import { SizeDialogComponent } from '../size-dialog/size-dialog.component';
-import { GameDialogComponent } from '../size-dialog/game-dialog/game-dialog.component';
+import { SizeDialogComponent } from './size-dialog/size-dialog.component';
+import { GameDialogComponent } from './game/game-dialog.component';
 import { MatchFoundDialogComponent } from './match-found-dialog/match-found-dialog.component';
-import { SessionService } from '../size-dialog/game-dialog/board/services/session.service';
-import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
+import { SessionService } from '../shared/services/session.service';
+import { GameService } from '../shared/services/game.service';
 
 @Component({
   selector: 'app-mode-selection',

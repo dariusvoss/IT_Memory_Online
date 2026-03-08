@@ -5,11 +5,10 @@ Manages the lifecycle of all active GameSession instances.
 
 from typing import Dict, Optional, List, Union
 from datetime import datetime, timedelta, timezone
-from services.game_session import GameSession, GameMode
+from services.game_session import GameSession
+from models import GameMode
+from utils import validate_card_count, validate_difficulty
 import uuid
-
-# Forward imports to avoid circular dependency
-# GameSession and GameMode will be imported at runtime
 
 
 class GameSessionManager:
@@ -52,6 +51,13 @@ class GameSessionManager:
         Returns:
             session_id: Unique identifier for the created session
         """
+        
+        # Validate board size and difficulty before creating session
+        if not validate_card_count(board_size):
+            raise ValueError(f"Invalid board size: {board_size}. Must be 16, 36, or 64.")
+        
+        if not validate_difficulty(difficulty):
+            raise ValueError(f"Invalid difficulty: {difficulty}. Must be 'Leicht', 'Mittel', 'Schwer', or 'None'.")
         
         session_id = str(uuid.uuid4())
 

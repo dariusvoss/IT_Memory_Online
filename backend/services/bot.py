@@ -1,6 +1,8 @@
 import random
 from typing import Dict, Optional, Tuple, List
 from collections import OrderedDict
+from config import BOT_MEMORY_SIZES
+from utils import validate_difficulty
 
 class BotAI:
     """Bot AI service for memory game"""
@@ -12,10 +14,9 @@ class BotAI:
     
     def set_difficulty(self, difficulty: str) -> None:
         """Set bot difficulty level"""
-        if difficulty in {'Leicht', 'Mittel', 'Schwer'}:
-            self.difficulty = difficulty
-        else:
+        if not validate_difficulty(difficulty):
             raise ValueError(f"Invalid difficulty: {difficulty}")
+        self.difficulty = difficulty
     
     def initialize(self, card_count: int) -> None:
         """Initialize bot for a game"""
@@ -79,13 +80,7 @@ class BotAI:
     
     def _get_max_memory_size(self) -> int:
         """Get maximum memory size based on card count"""
-        if self.card_count == 16:
-            return 4  # 4 cards for small deck
-        elif self.card_count == 36:
-            return 8  # 8 cards for medium deck
-        elif self.card_count == 64:
-            return 10  # 10 cards for large deck
-        return 2  # default
+        return BOT_MEMORY_SIZES.get(self.card_count, 2)
     
     def get_memory_status(self) -> Dict:
         """Get current memory status"""

@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
-import { GameRecord } from '../size-dialog/game-dialog/board/services/game-record.model';
+import { GameService } from '../../shared/services/game.service';
+import { GameRecord } from '../../shared/services/game-record.model';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({

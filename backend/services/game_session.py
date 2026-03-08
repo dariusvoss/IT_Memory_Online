@@ -8,112 +8,14 @@ This is the unified game logic module that combines all game mechanics.
 
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
-from enum import Enum
 import random
-from dataclasses import dataclass, field
 from services.bot import BotAI
-
-# ==================== Card Images List ====================
-
-CARD_IMAGES = [
-    'assets/images-small/Memory_Card_01_Default.webp',
-    'assets/images-small/Memory_Card_02_RTF_02.webp',
-    'assets/images-small/Memory_Card_03_Application_Window.webp',
-    'assets/images-small/Memory_Card_04_Folder_Opened.webp',
-    'assets/images-small/Memory_Card_05_Floppy_Disk.webp',
-    'assets/images-small/Memory_Card_06_Removable_Media.webp',
-    'assets/images-small/Memory_Card_07_Optical_Drive.webp',
-    'assets/images-small/Memory_Card_08_Chip.webp',
-    'assets/images-small/Memory_Card_09_Entire_Network.webp',
-    'assets/images-small/Memory_Card_10_My_Computer.webp',
-    'assets/images-small/Memory_Card_11_Printer.webp',
-    'assets/images-small/Memory_Card_12_Start_Menu_Programs.webp',
-    'assets/images-small/Memory_Card_13_Recent_Documents.webp',
-    'assets/images-small/Memory_Card_14_Control_Panel.webp',
-    'assets/images-small/Memory_Card_15_Search.webp',
-    'assets/images-small/Memory_Card_16_Help_and_Support.webp',
-    'assets/images-small/Memory_Card_17_Run.webp',
-    'assets/images-small/Memory_Card_18_2_Hibernate.webp',
-    'assets/images-small/Memory_Card_19_Sharing_Hand.webp',
-    'assets/images-small/Memory_Card_20_Recycle_Bin(full).webp',
-    'assets/images-small/Memory_Card_21_Administrative_Tools.webp',
-    'assets/images-small/Memory_Card_22_Audio_CD.webp',
-    'assets/images-small/Memory_Card_23_Add.webp',
-    'assets/images-small/Memory_Card_24_Favorites.webp',
-    'assets/images-small/Memory_Card_25_Logout.webp',
-    'assets/images-small/Memory_Card_26_Windows_Update.webp',
-    'assets/images-small/Memory_Card_27_Padlock.webp',
-    'assets/images-small/Memory_Card_28_Delete.webp',
-    'assets/images-small/Memory_Card_29_CAB.webp',
-    'assets/images-small/Memory_Card_30_BAT.webp',
-    'assets/images-small/Memory_Card_31_Font.webp',
-    'assets/images-small/Memory_Card_32_TrueType2.webp'
-]
-
-
-class GameStatus(str, Enum):
-    """Current status of a game session"""
-    WAITING = "waiting"
-    ACTIVE = "active"
-    PAUSED = "paused"
-    FINISHED = "finished"
-    ABANDONED = "abandoned"
-
-
-class GameMode(str, Enum):
-    """Type of game being played"""
-    SINGLEPLAYER_TIME = "singleplayer_time"  # Player vs. Time (no bot)
-    SINGLEPLAYER_AI = "singleplayer_ai"      # Player vs. Bot
-    MULTIPLAYER = "multiplayer"
-
-
-@dataclass
-class Card:
-    """Represents a single card on the board"""
-    id: int
-    image: str
-    flipped: bool = False
-    matched: bool = False
-    position: int = 0
-
-
-@dataclass
-class Move:
-    """Records a single move in the game"""
-    player_id: str
-    card_indices: List[int]
-    is_match: bool
-    timestamp: datetime
-    move_number: int
-
-
-@dataclass
-class MatchedPair:
-    """Records a successfully matched pair"""
-    card_indices: Tuple[int, int]
-    matched_by: str
-    match_time: datetime
-
-
-@dataclass
-class PlayerResult:
-    """Final results for a player after game ends"""
-    player_id: str
-    points: int
-    is_winner: bool
-    moves_count: int
-    time_spent: int
-    rank: Optional[str] = None  # For time-based ranking
-
-
-@dataclass
-class BotState:
-    """Tracking state for bot in singleplayer mode 'Player vs. Bot'"""
-    bot_id: str
-    difficulty: str  # 'Leicht', 'Mittel', 'Schwer'
-    card_memory: Dict[int, int] = field(default_factory=dict)  # position -> id
-    known_pairs: List[Tuple[int, int]] = field(default_factory=list)
-    last_seen_cards: List[int] = field(default_factory=list)
+from config import CARD_IMAGES, RANK_THRESHOLDS
+from utils import validate_card_count, format_time
+from models import (
+    GameStatus, GameMode, Card, Move, MatchedPair, 
+    PlayerResult
+)
 
 
 class GameSession:
@@ -198,7 +100,7 @@ class GameSession:
         Initialize game with specified board size.
         Creates and shuffles card deck.
         """
-        if self.board_size not in [16, 36, 64]:
+        if not validate_card_count(self.board_size):
             raise ValueError(f"Invalid board size: {self.board_size}. Must be 16, 36, or 64.")
         
         # Validate that we have enough card images
@@ -459,50 +361,32 @@ class GameSession:
     
     def calculate_rank(self, time_seconds: int) -> str:
         """
-        Calculate rank based on time and board size.
+        Calculate rank based on time and board size using RANK_THRESHOLDS from config.
         Used for singleplayer "Player vs. Time" mode.
         
         Args:
             time_seconds: Time elapsed in seconds
             
         Returns:
-            Rank (A, B, C, D, E)
+            Rank (A, B, C, D, E) based on thresholds
         """
-        if self.board_size == 16:
-            if time_seconds < 60:
-                return 'A'
-            elif time_seconds < 120:
-                return 'B'
-            elif time_seconds < 180:
-                return 'C'
-            elif time_seconds < 240:
-                return 'D'
-            else:
-                return 'E'
-        elif self.board_size == 36:
-            if time_seconds < 120:
-                return 'A'
-            elif time_seconds < 240:
-                return 'B'
-            elif time_seconds < 360:
-                return 'C'
-            elif time_seconds < 480:
-                return 'D'
-            else:
-                return 'E'
-        elif self.board_size == 64:
-            if time_seconds < 180:
-                return 'A'
-            elif time_seconds < 360:
-                return 'B'
-            elif time_seconds < 540:
-                return 'C'
-            elif time_seconds < 720:
-                return 'D'
-            else:
-                return 'E'
+        # Get thresholds for this board size
+        thresholds = RANK_THRESHOLDS.get(self.board_size, {})
         
-        return 'E'
+        if not thresholds:
+            return 'E'  # Default to E if board size not configured
+        
+        # Check thresholds in order: A < B < C < D < E
+        if time_seconds < thresholds['A']:
+            return 'A'
+        elif time_seconds < thresholds['B']:
+            return 'B'
+        elif time_seconds < thresholds['C']:
+            return 'C'
+        elif time_seconds < thresholds['D']:
+            return 'D'
+        else:
+            return 'E'
     
     # ==================== Win Condition & Finishing ====================
     
@@ -606,6 +490,10 @@ class GameSession:
         if self.started_at is not None:
             self.elapsed_time = int((datetime.now(tz=timezone.utc) - self.started_at).total_seconds())
     
+    def get_formatted_elapsed_time(self) -> str:
+        """Get elapsed time formatted as MM:SS using utils.format_time"""
+        return format_time(self.elapsed_time)
+    
     def check_win(self) -> bool:
         """
         Check if the game is won (alias for check_win_condition).
@@ -645,32 +533,14 @@ class GameSession:
             "board_size": self.board_size,
             "current_player": self.current_player_turn,
             "player_ids": self.player_ids,
-            "cards": [
-                {
-                    "id": card.id,
-                    "image": card.image,
-                    "flipped": card.flipped,
-                    "matched": card.matched
-                }
-                for card in self.cards
-            ],
+            "cards": [card.model_dump() for card in self.cards],
             "matched_pairs_count": len(self.matched_pairs),
             "pairs_found": self.pairs_found,
             "player_points": self.player_points,
             "elapsed_time": self.elapsed_time,
             "finished": self.finished,
             "winner": self.winner,
-            "final_results": [
-                {
-                    "player_id": r.player_id,
-                    "points": r.points,
-                    "is_winner": r.is_winner,
-                    "moves_count": r.moves_count,
-                    "time_spent": r.time_spent,
-                    "rank": r.rank
-                }
-                for r in self.final_results
-            ] if self.final_results else []
+            "final_results": [r.model_dump() for r in self.final_results] if self.final_results else []
         }
     
     def get_player_view(self, player_id: str) -> Dict:
@@ -691,17 +561,15 @@ class GameSession:
     def get_move_history(self) -> List[Dict]:
         """
         Get complete move history for replays or analysis.
+        Uses Pydantic model_dump() for automatic serialization (datetime -> ISO format).
         
         Returns:
             List of move records
         """
-        return [
-            {
-                "move_number": move.move_number,
-                "player_id": move.player_id,
-                "card_indices": move.card_indices,
-                "is_match": move.is_match,
-                "timestamp": move.timestamp.isoformat()
-            }
-            for move in self.move_history
-        ]
+        result = []
+        for move in self.move_history:
+            move_dict = move.model_dump()
+            # Convert datetime to ISO format string
+            move_dict['timestamp'] = move_dict['timestamp'].isoformat() if isinstance(move_dict['timestamp'], datetime) else move_dict['timestamp']
+            result.append(move_dict)
+        return result

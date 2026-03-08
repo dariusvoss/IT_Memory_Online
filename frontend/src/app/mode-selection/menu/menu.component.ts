@@ -1,11 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { GameDialogComponent } from './size-dialog/game-dialog/game-dialog.component';
-import { SizeDialogComponent } from './size-dialog/size-dialog.component';
-import { GameService } from './size-dialog/game-dialog/board/services/game.service';
-
-import { ScoreboardComponent } from './scoreboard/scoreboard.component';
-import { TimerService } from './size-dialog/game-dialog/board/services/timer.service';
+import { GameDialogComponent } from '../game/game-dialog.component';
+import { SizeDialogComponent } from '../size-dialog/size-dialog.component';
+import { GameService } from '../../shared/services/game.service';
+import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
+import { TimerService } from '../../shared/services/timer.service';
 import { DifficultyDialogComponent } from './difficulty-dialog/difficulty-dialog.component';
 
 @Component({

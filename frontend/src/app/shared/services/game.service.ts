@@ -2,11 +2,11 @@ import { Injectable, EventEmitter, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TimerService } from './timer.service';
 import { SessionService } from './session.service';
-import { FinishDialogComponent } from '../finish-dialog/finish-dialog.component';
+import { FinishDialogComponent } from '../../mode-selection/game/board/finish-dialog/finish-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map, mergeMap, catchError, finalize } from 'rxjs/operators';
-import { environment } from '../../../../../../environments/environment';
+import { environment } from '../../../environments/environment';
 import { GameRecord } from './game-record.model';
 
 type GameModeType = 'singleplayer_time' | 'singleplayer_ai' | 'multiplayer';
@@ -334,6 +334,12 @@ export class GameService {
    * Uses session service and handles response
    */
   flipCard(card: any): void {
+    // Prevent rapid clicks - exit if action already in progress or 2 cards already selected
+    if (this.isProcessingLocalAction || this.selectedCards.length >= 2) {
+      console.log('Action already in progress or 2 cards already selected. Ignoring click.');
+      return;
+    }
+    
     this.isProcessingLocalAction = true;
     const cardIndex = this.cards.indexOf(card);
 
@@ -342,6 +348,11 @@ export class GameService {
       card.flipped = true;
       this.selectedCards.push(card);
       this.cardsSubject.next([...this.cards]);
+    }
+
+    // Resume timer if paused during gameplay (Player vs. Time mode)
+    if (this.currentGameMode === 'singleplayer_time' && this.gameInitialized && !this.timerService.isTimerRunning) {
+      this.timerService.startTimer();
     }
 
     // Start game on first card flip (only once)
@@ -950,3 +961,4 @@ export class GameService {
     return of({ success: true });
   }
 }
+

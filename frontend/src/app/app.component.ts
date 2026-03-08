@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { PlayerIdService } from './menu/size-dialog/game-dialog/board/services/player-id.service';
-import { GameService } from './menu/size-dialog/game-dialog/board/services/game.service';
-import { GameModeSelectionComponent } from './menu/mode-selection/mode-selection.component';
+import { PlayerIdService } from './shared/services/player-id.service';
+import { GameService } from './shared/services/game.service';
+import { GameModeSelectionComponent } from './mode-selection/mode-selection.component';
 import { environment } from '../environments/environment';
 import { HttpClient } from '@angular/common/http';
 

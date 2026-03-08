@@ -7,10 +7,10 @@ a pair becomes available.
 """
 
 from typing import Dict, List, Optional, Callable
-from dataclasses import dataclass
 from datetime import datetime
 import uuid
 from enum import Enum
+from pydantic import BaseModel, Field
 
 
 class MatchStatus(str, Enum):
@@ -22,30 +22,15 @@ class MatchStatus(str, Enum):
     COMPLETED = "completed"
 
 
-@dataclass
-class Match:
+class Match(BaseModel):
     """Represents a matched pair of players"""
     match_id: str
     player_ids: List[str]  # exactly 2 players
     created_at: datetime
     status: MatchStatus = MatchStatus.MATCHED
     game_session_id: Optional[str] = None
-    deck_size: int = None  # <– Kartensatzgröße hinzufügen
-    metadata: Dict = None
-
-    def __post_init__(self):
-        if self.metadata is None:
-            self.metadata = {}
-
-
-    def to_dict(self):
-        return {
-            "match_id": self.match_id,
-            "player_ids": self.player_ids,
-            "status": getattr(self, "status", None),
-            "game_session_id": getattr(self, "game_session_id", None),
-            # weitere Felder nach Bedarf
-        }
+    deck_size: Optional[int] = None  # Kartensatzgröße
+    metadata: Dict = Field(default_factory=dict)
 
 
 class Matchmaker:

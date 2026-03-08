@@ -1,7 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { NgbActiveModal, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-
-import { ScoreboardComponent } from '../../../../scoreboard/scoreboard.component';
+import { ScoreboardComponent } from '../../../scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-finish-dialog',

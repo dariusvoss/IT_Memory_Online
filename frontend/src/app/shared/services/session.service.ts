@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
-import { environment } from '../../../../../../environments/environment';
+import { environment } from '../../../environments/environment';
 
 export interface GameSessionState {
   session_id: string;

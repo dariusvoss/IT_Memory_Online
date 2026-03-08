@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request, Body, Path
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import Optional, List, Dict
 import json
 import os
@@ -8,31 +7,23 @@ from datetime import datetime
 import uuid
 from fastapi.responses import JSONResponse
 from services.matchmaker import matchmaker, Match
-from services.game_session import GameMode, GameStatus
 from services.session_manager import GameSessionManager
+from models import GameRecord, CreateGameRequest, FlipCardRequest, GameMode, GameStatus
+from config import CORS_ORIGINS, API_PREFIX, API_VERSION
 
-app = FastAPI(title="Memory Game Backend", version="1.0.0")
+app = FastAPI(title="Memory Game Backend", version=API_VERSION)
 
 # CORS configuration for Angular frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:4200",      # Your frontend during development
-        "https://memory.ipv64.de",     # Your production domain
-    ],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],  # Only necessary methods
-    allow_headers=["Content-Type", "Authorization"],  # Only necessary headers
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
-
-# Import services
-from services.session_manager import GameSessionManager
-from services.timer import TimerService
-from models import GameRecord
 
 # Initialize services
 session_manager = GameSessionManager() #(session_timeout_minutes=30)
-timer_service = TimerService()
 multiplayer_finish_ack: Dict[str, set] = {}
 
 
@@ -52,17 +43,6 @@ def on_players_matched(match: Match):
 
 matchmaker.on_matched(on_players_matched)
 
-# ========================= Data Models =========================
-
-class CreateGameRequest(BaseModel):
-    player_ids: List[str]
-    difficulty: str  # 'Leicht', 'Mittel', 'Schwer'
-    board_size: int  # 16, 36, 64
-    game_mode: str = 'singleplayer_time'  # 'singleplayer_time', 'singleplayer_ai', 'multiplayer'
-
-class FlipCardRequest(BaseModel):
-    card_index: int
-
 # ========================= Routes - Session Management =========================
 
 @app.get("/")
@@ -70,7 +50,7 @@ def read_root():
     """Health check endpoint"""
     return {"message": "Memory Game API is running"}
 
-@app.post("/api/session/create")
+@app.post(f"{API_PREFIX}/session/create")
 def create_game(request: CreateGameRequest):
     """Create a new game session"""
     try:
@@ -90,7 +70,7 @@ def create_game(request: CreateGameRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.get("/api/session/{session_id}")
+@app.get(f"{API_PREFIX}/session/{{session_id}}")
 def get_session_state(session_id: str = Path(...)):
     """Get current state of a game session"""
     if session := session_manager.get_session(session_id):
@@ -101,7 +81,7 @@ def get_session_state(session_id: str = Path(...)):
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
-@app.get("/api/session/{session_id}/details")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/details")
 def get_session_details(session_id: str = Path(...)):
     """Get detailed state of a game session (including move history)"""
     session = session_manager.get_session(session_id)
@@ -116,7 +96,7 @@ def get_session_details(session_id: str = Path(...)):
         "data": session_data
     }
 
-@app.post("/api/session/{session_id}/start")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/start")
 def start_game(session_id: str = Path(...)):
     """Start a game session"""
     session = session_manager.get_session(session_id)
@@ -133,7 +113,7 @@ def start_game(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.post("/api/session/{session_id}/reset")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/reset")
 def reset_game(session_id: str = Path(...)):
     """Reset a game session"""
     session = session_manager.get_session(session_id)
@@ -150,7 +130,7 @@ def reset_game(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.post("/api/session/{session_id}/finalize-move")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/finalize-move")
 def finalize_move(session_id: str = Path(...)):
     """
     Finalize the current move.
@@ -171,7 +151,7 @@ def finalize_move(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.delete("/api/session/{session_id}")
+@app.delete(f"{API_PREFIX}/session/{{session_id}}")
 def delete_session(session_id: str = Path(...)):
     """Delete/close a game session"""
     if session_manager.delete_session(session_id):
@@ -181,7 +161,7 @@ def delete_session(session_id: str = Path(...)):
 
 # ========================= Routes - Game Play =========================
 
-@app.post("/api/session/{session_id}/flip-card")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/flip-card")
 def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
     """
     Flip a card in the game session.
@@ -241,14 +221,12 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
     except (ValueError, IndexError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.post("/api/session/{session_id}/bot-move")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/bot-move")
 def bot_move(session_id: str = Path(...)):
     """
     Execute bot's move for the current session.
     Only available in SINGLEPLAYER_AI mode.
     """
-    from services.game_session import GameMode
-
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -281,14 +259,12 @@ def bot_move(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.post("/api/session/{session_id}/check-win")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/check-win")
 def check_win(session_id: str = Path(...)):
     """
     Check if the game is won.
     Works for all game modes. Rank calculation only for SINGLEPLAYER_TIME mode.
     """
-    from services.game_session import GameMode
-
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -334,7 +310,7 @@ def check_win(session_id: str = Path(...)):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@app.post("/api/session/{session_id}/leave")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/leave")
 def leave_multiplayer_session(session_id: str = Path(...), data: dict = Body(...)):
     """
     A player leaves an active multiplayer game.
@@ -382,7 +358,7 @@ def leave_multiplayer_session(session_id: str = Path(...), data: dict = Body(...
 
 # ========================= Routes - Timer Management =========================
 
-@app.post("/api/session/{session_id}/timer/start")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/timer/start")
 def start_timer(session_id: str = Path(...)):
     """Start the timer for a game session"""
     session = session_manager.get_session(session_id)
@@ -399,7 +375,7 @@ def start_timer(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.post("/api/session/{session_id}/timer/stop")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/timer/stop")
 def stop_timer(session_id: str = Path(...)):
     """Stop the timer for a game session"""
     session = session_manager.get_session(session_id)
@@ -416,7 +392,7 @@ def stop_timer(session_id: str = Path(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-@app.get("/api/session/{session_id}/timer/status")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/timer/status")
 def get_timer_status(session_id: str = Path(...)):
     """Get current timer status for a game session"""
     if session := session_manager.get_session(session_id):
@@ -428,7 +404,7 @@ def get_timer_status(session_id: str = Path(...)):
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
-@app.get("/api/session/{session_id}/players")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/players")
 def get_players(session_id: str = Path(...)):
     """
     Get list of players in a session.
@@ -448,7 +424,7 @@ def get_players(session_id: str = Path(...)):
 
 # ========================= Routes - Move History & Replay =========================
 
-@app.get("/api/session/{session_id}/moves")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/moves")
 def get_moves(session_id: str = Path(...)):
     """
     Get complete move history for a session.
@@ -464,7 +440,7 @@ def get_moves(session_id: str = Path(...)):
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
-@app.get("/api/session/{session_id}/replay")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/replay")
 def get_replay(session_id: str = Path(...)):
     """
     Get complete replay data with card positions for visualization.
@@ -493,7 +469,7 @@ def get_replay(session_id: str = Path(...)):
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
-@app.get("/api/session/{session_id}/analysis")
+@app.get(f"{API_PREFIX}/session/{{session_id}}/analysis")
 def get_analysis(session_id: str = Path(...)):
     """
     Get game analysis and statistics.
@@ -532,7 +508,7 @@ def get_analysis(session_id: str = Path(...)):
 
 
 # ========================= Admin Routes =========================
-@app.get("/api/admin/sessions")
+@app.get(f"{API_PREFIX}/admin/sessions")
 def get_active_sessions():
     """Get all active sessions (for debug/admin)"""
     sessions = []
@@ -546,7 +522,7 @@ def get_active_sessions():
         "sessions": sessions
     }
 
-@app.post("/api/admin/cleanup")
+@app.post(f"{API_PREFIX}/admin/cleanup")
 def cleanup_sessions():
     """Clean up expired sessions"""
     count = session_manager.cleanup_expired_sessions()
@@ -556,7 +532,7 @@ def cleanup_sessions():
         "remaining_sessions": session_manager.get_session_count()
     }
 
-@app.get("/api/admin/active-matches")
+@app.get(f"{API_PREFIX}/admin/active-matches")
 def get_active_matches():
     """Gibt alle laufenden Matches zurück"""
     active_matches = matchmaker.get_active_matches()
@@ -566,28 +542,19 @@ def get_active_matches():
 
 def serialize_cards(cards: list) -> list:
     """
-    Convert Card dataclass objects to dicts for JSON serialization.
+    Serialize Card Pydantic models to dictionaries for JSON responses.
     
     Args:
-        cards: List of Card dataclass objects
+        cards: List of Card Pydantic models
         
     Returns:
         List of dictionaries with card data
     """
-    return [
-        {
-            "id": card.id,
-            "image": card.image,
-            "flipped": card.flipped,
-            "matched": card.matched,
-            "position": card.position
-        }
-        for card in cards
-    ]
+    return [card.model_dump() for card in cards]
 
 # ========================= Player ID Routes =========================
 
-@app.get("/api/player/create-id")
+@app.get(f"{API_PREFIX}/player/create-id")
 def create_player_id():
     """Create a new player ID"""
     player_id = str(uuid.uuid4())
@@ -597,7 +564,7 @@ def create_player_id():
         "status": "created"
     }
 
-@app.get("/api/player/verify-id")
+@app.get(f"{API_PREFIX}/player/verify-id")
 def verify_player_id(request: Request):
     """Verify existing player ID from cookie"""
     if player_id := request.cookies.get("player_id"):
@@ -607,7 +574,7 @@ def verify_player_id(request: Request):
 
 # ========================= Matchmaking Routes =========================
 
-@app.post("/api/matchmaking/join-queue")
+@app.post(f"{API_PREFIX}/matchmaking/join-queue")
 def join_queue(data: dict):
     """Join the matchmaking queue"""
     player_id = data.get("player_id")
@@ -621,7 +588,7 @@ def join_queue(data: dict):
     else:
         return {"status": "error", "message": "Already in queue or in a match"}
 
-@app.post("/api/matchmaking/leave-queue")
+@app.post(f"{API_PREFIX}/matchmaking/leave-queue")
 def leave_queue(data: dict):
     """Leave the matchmaking queue"""
     player_id = data.get("player_id")
@@ -632,7 +599,7 @@ def leave_queue(data: dict):
         "message": "Left queue" if success else "Not in queue"
     }
 
-@app.get("/api/matchmaking/status/{player_id}")
+@app.get(f"{API_PREFIX}/matchmaking/status/{{player_id}}")
 def get_matchmaking_status(player_id: str):
     """Get matchmaking status for a player"""
     match = matchmaker.get_player_match(player_id)
@@ -660,12 +627,12 @@ def get_matchmaking_status(player_id: str):
     else:
         return {"status": "not_in_queue"}
 
-@app.get("/api/matchmaking/stats")
+@app.get(f"{API_PREFIX}/matchmaking/stats")
 def get_matchmaker_stats():
     """Get matchmaker statistics"""
     return matchmaker.get_stats()
 
-@app.get("/api/matchmaking/queue")
+@app.get(f"{API_PREFIX}/matchmaking/queue")
 def get_queue():
     """Get current matchmaking queue"""
     return {
@@ -673,7 +640,7 @@ def get_queue():
         "queue_size": matchmaker.get_queue_size()
     }
 
-@app.delete("/api/matchmaking/match/{match_id}")
+@app.delete(f"{API_PREFIX}/matchmaking/match/{{match_id}}")
 def delete_match(match_id: str):
     """Löscht ein aktives Match basierend auf der match_id"""
     try:
@@ -685,7 +652,7 @@ def delete_match(match_id: str):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@app.post("/api/session/{session_id}/finish-ack")
+@app.post(f"{API_PREFIX}/session/{{session_id}}/finish-ack")
 def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
     """
     Acknowledge game finish from one player.
@@ -707,7 +674,6 @@ def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
             "message": "Session already cleaned"
         }
 
-    from services.game_session import GameMode
     if session.game_mode != GameMode.MULTIPLAYER:
         return {
             "status": "success",

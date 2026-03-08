@@ -1,9 +1,8 @@
 import { Component, inject, Input, OnInit, OnDestroy } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 import { BoardComponent } from './board/board.component';
-
-import { GameService } from './board/services/game.service';
-import { TimerService } from './board/services/timer.service';
+import { GameService } from '../../shared/services/game.service';
+import { TimerService } from '../../shared/services/timer.service';
 import { Subscription } from 'rxjs';
 
 @Component({
