@@ -1,0 +1,121 @@
+.game-mode-container {
+  border-radius: 10px;
+  background-color: beige;
+  width: 100%;
+}
+
+/* Mode Selection */
+.mode-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  gap: 3rem;
+  padding: 2rem;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  justify-content: center;
+  width: 100%;               /* optional: full width */
+  max-width: 400px;          /* or similar */
+}
+
+/* Menu Container */
+.menu-container {
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  z-index: 100;
+}
+
+/* Loading Screen */
+.loading-container {
+  position: relative;
+}
+
+.loading-container .back-button {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+}
+
+.loading-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: auto;
+  gap: 2rem;
+}
+
+.loading-screen h2 {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.spinner {
+  width: 280px;
+  height: 20px;
+  background-color: #f0f0f0;
+  border: 2px solid #808080;
+  border-right: 2px solid #dfdfdf;
+  border-bottom: 2px solid #dfdfdf;
+  border-radius: 2px;
+  padding: 2px;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.spinner::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: 16px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    #0078d4 0px,
+    #0078d4 8px,
+    #f0f0f0 8px,
+    #f0f0f0 10px,
+    #0078d4 10px,
+    #0078d4 18px,
+    #f0f0f0 18px,
+    #f0f0f0 20px,
+    #0078d4 20px,
+    #0078d4 28px,
+    #f0f0f0 28px,
+    #f0f0f0 350px
+  );
+  animation: windowsXpProgress 1.5s linear infinite;
+  border-radius: 1px;
+}
+
+@keyframes windowsXpProgress {
+  0% {
+    transform: translateX(-30px);
+  }
+  100% {
+    transform: translateX(280px);
+  }
+}
+
+.loading-screen p {
+  font-size: 1.2rem;
+}

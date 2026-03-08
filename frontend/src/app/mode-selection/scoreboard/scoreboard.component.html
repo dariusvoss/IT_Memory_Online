@@ -1,0 +1,42 @@
+<div class="scoreboard">
+  <div class="modal-header xp-header" style="justify-content: center;">
+    <h2 style="text-align: center">Scoreboard</h2>
+  </div>
+  <table class="scoreboard-table">
+    <thead>
+      <tr>
+        <th>Datum</th>
+        <th>Modus</th>
+        <th>Schwierigkeitsgrad</th>
+        <th>Kartensatzgröße</th>
+        <th>Punkte / Rang</th>
+        <th>Zeit</th>
+        <th>Endergebnis</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (record of gameRecords; track record) {
+        <tr>
+          <td>{{ record.date }}</td>
+          <td>{{ record.mode }}</td>
+          <td>{{ record.difficultyLevel }}</td>
+          <td>{{ record.deckSize }}</td>
+          @if (record.points !== '-') {
+            <td>{{ record.points }}</td>
+          }
+          @if (record.points === '-' && record.rank !== '-') {
+            <td>{{ record.rank }}</td>
+          }
+          @if (record.points === '-' && record.rank === '-') {
+            <td>-</td>
+          }
+          <td>{{ record.time }}</td>
+          <td>{{ record.result }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <div class="modal-footer xp-footer">
+    <button class="btn xp-btn" (click)="closeModal()">Schließen</button>
+  </div>
+</div>
