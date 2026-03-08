@@ -7,6 +7,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map, mergeMap, catchError, finalize } from 'rxjs/operators';
 import { environment } from '../../../../../../environments/environment';
+import { GameRecord } from './game-record.model';
 
 type GameModeType = 'singleplayer_time' | 'singleplayer_ai' | 'multiplayer';
 
@@ -66,6 +67,7 @@ export class GameService {
 
   constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService initialized');
+    this.loadGameRecords();
   }
 
 
@@ -545,14 +547,15 @@ export class GameService {
             ? this.formatSeconds(response.time)
             : this.timerService.getFormattedTimer();
 
-          const record = {
+          const record: GameRecord = {
             date: new Date().toLocaleString(),
-            mode: this.currentGameMode === 'singleplayer_ai' ? 'Spieler vs. Bot' : this.currentGameMode === 'multiplayer' ? 'Spieler vs. Spieler' : 'Spieler vs. Zeit',
-            difficulty_level: this.currentGameMode === 'singleplayer_ai' ? this.difficulty : '-',
-            deck_size: this.getSelectedSize(this.cards.length),
+            mode: this.currentGameMode === 'singleplayer_ai' ? 'Spieler vs. Bot' : this.currentGameMode === 'multiplayer' ? 'Multiplayer' : 'Spieler vs. Zeit',
+            difficultyLevel: this.currentGameMode === 'singleplayer_ai' ? this.difficulty : '-',
+            deckSize: this.getSelectedSize(this.cards.length),
             points: this.currentGameMode === 'singleplayer_time' ? '-' : `${this.pairsFoundPlayer}`,
-            rank: response.rank || '-',
-            time: response.time !== undefined ? finTime : this.timerService.getFormattedTimer()
+            rank: this.currentGameMode === 'singleplayer_time' ? (response.rank || '-') : '-',
+            time: this.currentGameMode === 'singleplayer_time' ? finTime : '-',
+            result: this.calculateGameResult(response)
           };
 
           // Open finish dialog
@@ -591,8 +594,8 @@ export class GameService {
             modalRef.componentInstance.message = WIN_MESSAGES.allPairsFound;
           }
 
-          // Save record (optional - implement if needed)
-          // this.http.post(`${this.apiUrl}/save-record`, record).subscribe();
+          // Save record to local storage (cookies)
+          this.addGameRecord(record);
 
           if (this.currentGameMode === 'multiplayer') {
             this.stopMultiplayerPolling();
@@ -632,6 +635,33 @@ export class GameService {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  }
+
+  /**
+   * Calculate game result based on game mode
+   * Returns: "Sieg" | "Niederlage" | "Unentschieden" | "-"
+   */
+  private calculateGameResult(response: any): string {
+    if (this.currentGameMode === 'singleplayer_ai') {
+      if (this.pairsFoundPlayer > this.pairsFoundBot) {
+        return 'Sieg';
+      } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
+        return 'Niederlage';
+      } else {
+        return 'Unentschieden';
+      }
+    } else if (this.currentGameMode === 'multiplayer') {
+      if (response.winner && response.winner === this.localPlayerId) {
+        return 'Sieg';
+      } else if (response.winner && response.winner !== this.localPlayerId) {
+        return 'Niederlage';
+      } else {
+        return 'Unentschieden';
+      }
+    } else {
+      // Singleplayer vs. Zeit
+      return '-';
+    }
   }
 
   /**
@@ -851,13 +881,57 @@ export class GameService {
   //-------------------------------------------------------------------------------------//
 
   /**
-   * Load game records from backend
-   * TODO: Implement using new analysis endpoint
+   * Load game records from cookie storage
    */
   private loadGameRecords(): void {
-    // Records functionality to be integrated with new backend analysis endpoint
-    this.gameRecords = [];
-    console.log('Game records to be loaded from backend analysis');
+    const records = this.loadGameRecordsFromCookie();
+    this.gameRecords = records;
+    console.log('Game records loaded from cookie:', records);
+  }
+
+  /**
+   * Add a new game record and save to cookie
+   */
+  private addGameRecord(record: GameRecord): void {
+    this.gameRecords.push(record);
+    this.saveGameRecordsToCookie();
+    console.log('Game record added:', record);
+    console.log('All records:', this.gameRecords);
+  }
+
+  /**
+   * Save game records to browser cookie
+   */
+  private saveGameRecordsToCookie(): void {
+    try {
+      const jsonString = JSON.stringify(this.gameRecords);
+      // Encode to make it cookie-safe
+      const encodedRecords = encodeURIComponent(jsonString);
+      // Set cookie to expire in 1 year
+      const expirationDate = new Date();
+      expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+      document.cookie = `game_records=${encodedRecords}; expires=${expirationDate.toUTCString()}; path=/`;
+    } catch (error) {
+      console.error('Error saving game records to cookie:', error);
+    }
+  }
+
+  /**
+   * Load game records from browser cookie
+   */
+  private loadGameRecordsFromCookie(): GameRecord[] {
+    try {
+      const cookies = document.cookie.split('; ');
+      const recordsCookie = cookies.find(row => row.startsWith('game_records='));
+      if (recordsCookie) {
+        const encodedRecords = recordsCookie.split('=')[1];
+        const jsonString = decodeURIComponent(encodedRecords);
+        return JSON.parse(jsonString);
+      }
+    } catch (error) {
+      console.error('Error loading game records from cookie:', error);
+    }
+    return [];
   }
 
   /**

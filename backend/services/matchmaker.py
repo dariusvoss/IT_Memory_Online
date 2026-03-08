@@ -204,9 +204,7 @@ class Matchmaker:
     def get_player_match(self, player_id: str) -> Optional[Match]:
         """Get match details for a specific player"""
         match_id = self.player_to_match.get(player_id)
-        if match_id:
-            return self.matches.get(match_id)
-        return None
+        return self.matches.get(match_id) if match_id else None
 
     def set_match_game_session(self, match_id: str, game_session_id: str) -> bool:
         """
@@ -219,8 +217,7 @@ class Matchmaker:
         Returns:
             True if successful, False if match not found
         """
-        match = self.matches.get(match_id)
-        if match:
+        if match := self.matches.get(match_id):
             match.game_session_id = game_session_id
             match.status = MatchStatus.ACCEPTED
             return True
@@ -237,8 +234,7 @@ class Matchmaker:
         Returns:
             True if successful, False if match not found
         """
-        match = self.matches.get(match_id)
-        if match:
+        if match := self.matches.get(match_id):
             match.status = MatchStatus.COMPLETED
             return True
         return False
@@ -270,8 +266,7 @@ class Matchmaker:
 
     def delete_match(self, match_id: str) -> bool:
         """Löscht ein Match aus der aktiven Match-Liste"""
-        match = self.matches.get(match_id)
-        if match:
+        if match := self.matches.get(match_id):
             for player_id in match.player_ids:
                 if player_id in self.player_to_match:
                     del self.player_to_match[player_id]
@@ -281,10 +276,14 @@ class Matchmaker:
 
     def delete_match_by_session(self, session_id: str) -> bool:
         """Löscht ein Match anhand der verknüpften game_session_id"""
-        for match_id, match in list(self.matches.items()):
-            if match.game_session_id == session_id:
-                return self.delete_match(match_id)
-        return False
+        return next(
+            (
+                self.delete_match(match_id)
+                for match_id, match in list(self.matches.items())
+                if match.game_session_id == session_id
+            ),
+            False,
+        )
 
     def clear_queue(self) -> int:
         """
@@ -306,10 +305,16 @@ class Matchmaker:
         """
         return {
             "queue_by_deck_size": {k: len(v) for k, v in self.queue.items()},
-            "total_queue_size": sum(len(players) for players in self.queue.values()),
+            "total_queue_size": sum(
+                len(players) for players in self.queue.values()
+            ),
             "total_matches": len(self.matches),
-            "active_matches": sum(1 for m in self.matches.values() if m.status == MatchStatus.MATCHED),
-            "completed_matches": sum(1 for m in self.matches.values() if m.status == MatchStatus.COMPLETED)
+            "active_matches": sum(
+                m.status == MatchStatus.MATCHED for m in self.matches.values()
+            ),
+            "completed_matches": sum(
+                m.status == MatchStatus.COMPLETED for m in self.matches.values()
+            ),
         }
 
     def get_active_matches(self):

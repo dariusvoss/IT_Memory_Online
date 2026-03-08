@@ -1,51 +1,60 @@
 <div class="game-mode-container">
   <!-- Mode Selection Screen -->
-  <div *ngIf="selectedMode === 'none'" class="mode-selection">
+  <!-- Shown when: no mode selected OR Multiplayer selected but no deck size chosen yet -->
+  @if (selectedMode === 'none' || (selectedMode === 'multiplayer' && multiplayerState === 'idle')) {
+    <div class="mode-selection">
 
-    <div class="button-group">
-      <button class="btn btn-primary" (click)="selectSingleplayer()">
-        Singleplayer
-      </button>
-
-      <button class="btn btn-secondary" (click)="selectMultiplayer()">
-        Multiplayer
-      </button>
-
-      <button class="btn btn-tertiary" (click)="openScoreboard()">
-        Scoreboard
-      </button>
-    </div>
-  </div>
-
-  <!-- Singleplayer: Show Menu -->
-  <div *ngIf="selectedMode === 'singleplayer'" class="menu-container">
-    <button class="back-button" (click)="goBack()">← Zurück</button>
-    <app-menu></app-menu>
-  </div>
-
-  <!-- Multiplayer: Active Session Menu -->
-  <div *ngIf="selectedMode === 'multiplayer' && multiplayerState === 'active'" class="menu-container">
-    <button class="back-button" (click)="goBack()">← Zurück</button>
-    <div class="loading-screen">
-      <h2>Aktive PvP-Runde</h2>
       <div class="button-group">
-        <button class="btn btn-secondary" (click)="openBoardDialog(activeSessionId!, activeSessionData)">
-          Spiel fortsetzen
+        <button class="xp-btn" (click)="selectSingleplayer()" >
+          Singleplayer
         </button>
-        <button class="btn btn-primary" (click)="leaveActiveGame()">
-          Spiel verlassen
+
+        <button class="xp-btn" (click)="selectMultiplayer()">
+          Multiplayer
+        </button>
+
+        <button class="xp-btn" (click)="openScoreboard()">
+          Scoreboard
         </button>
       </div>
     </div>
-  </div>
+  }
+
+  <!-- Singleplayer: Show Menu -->
+  @if (selectedMode === 'singleplayer') {
+    <div class="menu-container">
+      <button class="xp-btn back-button" (click)="goBack()">← Zurück</button>
+      <app-menu></app-menu>
+    </div>
+  }
+
+  <!-- Multiplayer: Active Session Menu -->
+  @if (selectedMode === 'multiplayer' && multiplayerState === 'active') {
+    <div class="menu-container">
+      <button class="xp-btn back-button" (click)="goBack()">← Zurück</button>
+      <div class="loading-screen">
+        <h2>Aktive PvP-Runde</h2>
+        <div class="button-group">
+          <button class="btn btn-secondary" (click)="openBoardDialog(activeSessionId!, activeSessionData)">
+            Spiel fortsetzen
+          </button>
+          <button class="btn btn-primary" (click)="leaveActiveGame()">
+            Spiel verlassen
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 
   <!-- Multiplayer: Loading Screen -->
-  <div *ngIf="selectedMode === 'multiplayer' && multiplayerState === 'searching'" class="loading-container">
-    <button class="back-button" (click)="goBack()">← Zurück</button>
-    <div class="loading-screen">
-      <h2>LOADING...</h2>
-      <div class="spinner"></div>
-      <p>Suche nach Spielern...</p>
+  @if (selectedMode === 'multiplayer' && multiplayerState === 'searching') {
+    <div class="loading-container">
+      <button class="xp-btn back-button" (click)="goBack()">← Zurück</button>
+      <div class="loading-screen">
+        <h2>LOADING...</h2>
+        <div class="spinner"></div>
+        <p>Suche nach Spielern...</p>
+      </div>
     </div>
-  </div>
+  }
 </div>

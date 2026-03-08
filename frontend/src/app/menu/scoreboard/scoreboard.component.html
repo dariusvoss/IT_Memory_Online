@@ -11,25 +11,28 @@
         <th>Kartensatzgröße</th>
         <th>Punkte / Rang</th>
         <th>Zeit</th>
+        <th>Endergebnis</th>
       </tr>
     </thead>
     <tbody>
       @for (record of gameRecords; track record) {
-        @for (record of gameRecords; track record) {
-          <tr>
-            <td>{{ record.date }}</td>
-            <td>{{ record.mode }}</td>
-            <td>{{ record.difficultyLevel }}</td>
-            <td>{{ record.deckSize }}</td>
-            @if (record.points !== '-') {
-              <td>{{ record.points }}</td>
-            }
-            @if (record.rank !== '-') {
-              <td>{{ record.rank }}</td>
-            }
-            <td>{{ record.time }}</td>
-          </tr>
-        }
+        <tr>
+          <td>{{ record.date }}</td>
+          <td>{{ record.mode }}</td>
+          <td>{{ record.difficultyLevel }}</td>
+          <td>{{ record.deckSize }}</td>
+          @if (record.points !== '-') {
+            <td>{{ record.points }}</td>
+          }
+          @if (record.points === '-' && record.rank !== '-') {
+            <td>{{ record.rank }}</td>
+          }
+          @if (record.points === '-' && record.rank === '-') {
+            <td>-</td>
+          }
+          <td>{{ record.time }}</td>
+          <td>{{ record.result }}</td>
+        </tr>
       }
     </tbody>
   </table>

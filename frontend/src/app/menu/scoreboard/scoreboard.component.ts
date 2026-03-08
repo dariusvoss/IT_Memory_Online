@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { GameService } from '../size-dialog/game-dialog/board/services/game.service';
-
+import { GameRecord } from '../size-dialog/game-dialog/board/services/game-record.model';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
@@ -11,7 +11,7 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 })
 export class ScoreboardComponent implements OnInit {
   gameService = inject(GameService);
-  gameRecords: { date: string; mode: string; difficultyLevel: string; deckSize: string; points: string; rank: string; time: string }[] = [];
+  gameRecords: GameRecord[] = [];
 
   constructor(public activeModal: NgbActiveModal) {}
 

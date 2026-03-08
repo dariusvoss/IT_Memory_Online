@@ -3,8 +3,9 @@ Session Manager for handling multiple concurrent game sessions.
 Manages the lifecycle of all active GameSession instances.
 """
 
-from typing import Dict, Optional, List
-from datetime import datetime, timedelta
+from typing import Dict, Optional, List, Union
+from datetime import datetime, timedelta, timezone
+from backend.services.game_session import GameSession, GameMode
 import uuid
 
 # Forward imports to avoid circular dependency
@@ -37,7 +38,7 @@ class GameSessionManager:
         player_ids: List[str],
         difficulty: str,
         board_size: int,
-        game_mode: 'GameMode' = None
+        game_mode: Optional[Union['GameMode', str]] = None
     ) -> str:
         """
         Create and register a new game session.
@@ -51,23 +52,22 @@ class GameSessionManager:
         Returns:
             session_id: Unique identifier for the created session
         """
-        from services.game_session import GameSession, GameMode
         
         session_id = str(uuid.uuid4())
-        
+
         # Convert string to GameMode enum if necessary
         if game_mode is None:
             game_mode = GameMode.SINGLEPLAYER_TIME
         elif isinstance(game_mode, str):
             try:
                 game_mode = GameMode[game_mode.upper()]
-            except KeyError:
-                raise ValueError(f"Invalid game mode: {game_mode}")
-        
+            except KeyError as e:
+                raise ValueError(f"Invalid game mode: {game_mode}") from e
+
         # For SINGLEPLAYER_AI, add bot as second player
         if game_mode == GameMode.SINGLEPLAYER_AI and len(player_ids) == 1:
-            player_ids = player_ids + ['bot']
-        
+            player_ids += ['bot']
+
         session = GameSession(
             session_id=session_id,
             player_ids=player_ids,
@@ -77,7 +77,7 @@ class GameSessionManager:
         )
         # Initialize game (create and shuffle cards)
         session.initialize_game()
-        
+
         self.sessions[session_id] = session
         # print(f"Created new session: {session.session_id}, mode: {session.game_mode}, players: {session.player_ids}")
         # print(f"Total active sessions: {len(self.sessions)}")
@@ -152,8 +152,8 @@ class GameSessionManager:
         if session.finished:
             return False  # Keep finished sessions available for results
         
-        # Check age against timeout
-        age = datetime.now() - session.created_at
+        # Check age against timeout using timezone-aware UTC
+        age = datetime.now(tz=timezone.utc) - session.created_at
         return age > self.session_timeout
     
     def get_session_count(self) -> int:
@@ -170,21 +170,22 @@ class GameSessionManager:
         Returns:
             Dictionary with session information
         """
-        session = self.get_session(session_id)
-        if not session:
+        if session := self.get_session(session_id):
+            # Serialize created_at explicitly as UTC ISO-8601 format
+            created_at_utc = session.created_at.astimezone(timezone.utc)
+            return {
+                'session_id': session.session_id,
+                'status': session.status.value,
+                'game_mode': session.game_mode.value,
+                'difficulty': session.difficulty,
+                'board_size': session.board_size,
+                'pairs_found': session.pairs_found,
+                'players': session.player_ids,
+                'current_turn': session.current_player_turn,
+                'created_at': created_at_utc.isoformat()
+            }
+        else:
             return None
-        
-        return {
-            'session_id': session.session_id,
-            'status': session.status.value,
-            'game_mode': session.game_mode.value,
-            'difficulty': session.difficulty,
-            'board_size': session.board_size,
-            'pairs_found': session.pairs_found,
-            'players': session.player_ids,
-            'current_turn': session.current_player_turn,
-            'created_at': session.created_at.isoformat()
-        }
     
     def close_session(self, session_id: str) -> None:
         """

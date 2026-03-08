@@ -6,7 +6,7 @@ Supports singleplayer and multiplayer games modes.
 This is the unified game logic module that combines all game mechanics.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from enum import Enum
 import uuid
@@ -144,7 +144,7 @@ class GameSession:
     ):
         # ==================== Session Management ====================
         self.session_id = session_id
-        self.created_at = datetime.now()
+        self.created_at = datetime.now(tz=timezone.utc)
         self.started_at: Optional[datetime] = None
         self.ended_at: Optional[datetime] = None
         
@@ -283,9 +283,8 @@ class GameSession:
         self.selected_cards.append((card_index, card))
         
         # Remember card for bot (only for 'Schwer' difficulty when player flips cards)
-        if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI:
-            if self.difficulty == 'Schwer':  # Only remember player's cards on hard difficulty
-                self.bot_ai.remember_card(card_index, card.id, seen_by='player')
+        if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI and self.difficulty == 'Schwer':
+            self.bot_ai.remember_card(card_index, card.id, seen_by='player')
         
         return True
     
@@ -300,43 +299,16 @@ class GameSession:
         """
         if len(self.selected_cards) < 2:
             return False, []
-        
+
         # Extract card index and card from tuples
         idx1, card1 = self.selected_cards[0]
         idx2, card2 = self.selected_cards[1]
-        
+
         # Determine if cards match
         is_pair = card1.id == card2.id
-        
+
         if is_pair:
-            # Mark cards as matched
-            card1.matched = True
-            card2.matched = True
-            
-            # Award points to current player
-            self.pairs_found += 1
-            self.player_points[self.current_player_turn] += 1
-            
-            # Store matched pair record
-            self.matched_pairs.append(
-                MatchedPair(
-                    card_indices=(idx1, idx2),
-                    matched_by=self.current_player_turn,
-                    match_time=datetime.now()
-                )
-            )
-            
-            # Record successful move
-            self.record_move(
-                self.current_player_turn,
-                [idx1, idx2],
-                is_match=True
-            )
-            
-            # Remove cards from bot memory
-            if self.bot_ai:
-                self.bot_ai.forget_card(idx1)
-                self.bot_ai.forget_card(idx2)
+            self.match_cards(card1, card2, idx1, idx2)
         else:
             # No match - Record unsuccessful move
             # NOTE: Cards stay flipped! Frontend will flip them back after cardVisibilityDuration.
@@ -346,18 +318,48 @@ class GameSession:
                 [idx1, idx2],
                 is_match=False
             )
-            
+
             # Store indices for later finalization
             self.last_unmatched_cards = [idx1, idx2]
-            
+
             # Switch turn on mismatch (except in singleplayer time mode)
             if self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
                 self.next_turn()
-        
+
         # Clear selected cards
         self.selected_cards = []
-        
+
         return is_pair, [idx1, idx2]
+
+    def match_cards(self, card1, card2, idx1, idx2):
+        # Mark cards as matched
+        card1.matched = True
+        card2.matched = True
+
+        # Award points to current player
+        self.pairs_found += 1
+        self.player_points[self.current_player_turn] += 1
+
+        # Store matched pair record
+        self.matched_pairs.append(
+            MatchedPair(
+                card_indices=(idx1, idx2),
+                matched_by=self.current_player_turn,
+                match_time=datetime.now(tz=timezone.utc)
+            )
+        )
+
+        # Record successful move
+        self.record_move(
+            self.current_player_turn,
+            [idx1, idx2],
+            is_match=True
+        )
+
+        # Remove cards from bot memory
+        if self.bot_ai:
+            self.bot_ai.forget_card(idx1)
+            self.bot_ai.forget_card(idx2)
     
     
     def finalize_move(self) -> None:
@@ -394,7 +396,7 @@ class GameSession:
             player_id=player_id,
             card_indices=card_indices,
             is_match=is_match,
-            timestamp=datetime.now(),
+            timestamp=datetime.now(tz=timezone.utc),
             move_number=len(self.move_history) + 1
         )
         self.move_history.append(move)
@@ -411,43 +413,43 @@ class GameSession:
         """
         if not self.bot_ai or self.game_mode != GameMode.SINGLEPLAYER_AI:
             return None
-        
+
         if not self.cards:
             return None
-        
+
         # Get available cards (not flipped, not matched)
         available_cards = [
             (i, card) for i, card in enumerate(self.cards)
             if not card.flipped and not card.matched
         ]
-        
+
         if not available_cards or len(available_cards) < 2:
             return None
-        
+
         # Get bot's decision (which cards to flip)
         first_idx, second_idx = self.bot_ai.decide_move(available_cards)
-        
+
         if second_idx == -1:
             return None  # Not enough cards available
-        
+
         # Execute the move
         self.flip_card(self.current_player_turn, first_idx)
-        first_card = self.cards[first_idx]
-        
         # Bot remembers its own cards
         if self.difficulty in ['Mittel', 'Schwer']:
+            first_card = self.cards[first_idx]
+
             self.bot_ai.remember_card(first_idx, first_card.id, seen_by='bot')
-        
+
         self.flip_card(self.current_player_turn, second_idx)
-        second_card = self.cards[second_idx]
-        
         # Bot remembers its own cards
         if self.difficulty in ['Mittel', 'Schwer']:
+            second_card = self.cards[second_idx]
+
             self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
-        
+
         # Check if bot's cards match (important: must be done here!)
         is_match, matched_positions = self.check_match()
-        
+
         return {
             'type': 'bot_move',
             'first_card': first_idx,
@@ -530,20 +532,20 @@ class GameSession:
         """
         self.status = GameStatus.FINISHED
         self.finished = True
-        self.ended_at = datetime.now()
-        self.last_unmatched_cards = []  # Clear any pending unmatched cards
-        
+        self.ended_at = datetime.now(tz=timezone.utc)
+        self.finalize_move()  # Flip back any unmatched cards and clear the list
+
         # Calculate elapsed time
         if self.started_at:
             self.elapsed_time = int((self.ended_at - self.started_at).total_seconds())
-        
+
         # Determine winner(s)
         max_points = max(self.player_points.values()) if self.player_points else 0
         winners = [pid for pid, pts in self.player_points.items() if pts == max_points]
-        
+
         # Single winner if there's a clear leader
         self.winner = winners[0] if len(winners) == 1 else None
-        
+
         # Build final results for each player
         self.final_results = []
         for pid in self.player_ids:
@@ -551,14 +553,14 @@ class GameSession:
             # Calculate rank for singleplayer time mode
             if self.game_mode == GameMode.SINGLEPLAYER_TIME and len(self.player_ids) == 1:
                 rank = self.calculate_rank(self.elapsed_time)
-            
+
             result = PlayerResult(
                 player_id=pid,
                 points=self.player_points[pid],
                 is_winner=pid in winners,
-                moves_count=sum(1 for m in self.move_history if m.player_id == pid),
+                moves_count=sum(m.player_id == pid for m in self.move_history),
                 time_spent=self.elapsed_time,
-                rank=rank
+                rank=rank,
             )
             self.final_results.append(result)
     
@@ -567,17 +569,11 @@ class GameSession:
         Start the game session.
         Changes status from WAITING to ACTIVE and sets start time.
         """
-        if self.status == GameStatus.WAITING:
-            self.status = GameStatus.ACTIVE
-            self.started_at = datetime.now()
-            return
-
-        # Idempotent behavior: repeated start requests for an already active game
-        # should not fail (e.g. multiplayer clients starting nearly at the same time).
-        if self.status == GameStatus.ACTIVE:
-            return
-
-        raise ValueError(f"Cannot start game with status: {self.status}")
+        if self.status != GameStatus.WAITING:
+            raise ValueError(f"Cannot start game with status: {self.status}")
+        
+        self.status = GameStatus.ACTIVE
+        self.started_at = datetime.now(tz=timezone.utc)
     
     def reset_game(self) -> None:
         """
@@ -606,12 +602,12 @@ class GameSession:
         if self.status != GameStatus.ACTIVE:
             raise ValueError(f"Cannot start timer with game status: {self.status}")
         if self.started_at is None:
-            self.started_at = datetime.now()
+            self.started_at = datetime.now(tz=timezone.utc)
     
     def stop_timer(self) -> None:
         """Stop the game timer and calculate elapsed time"""
         if self.started_at is not None:
-            self.elapsed_time = int((datetime.now() - self.started_at).total_seconds())
+            self.elapsed_time = int((datetime.now(tz=timezone.utc) - self.started_at).total_seconds())
     
     def check_win(self) -> bool:
         """
