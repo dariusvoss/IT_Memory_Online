@@ -68,20 +68,51 @@
 }
 
 .spinner {
-  width: 60px;
-  height: 60px;
-  border: 6px solid rgba(255, 255, 255, 0.3);
-  border-top: 6px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  width: 280px;
+  height: 20px;
+  background-color: #f0f0f0;
+  border: 2px solid #808080;
+  border-right: 2px solid #dfdfdf;
+  border-bottom: 2px solid #dfdfdf;
+  border-radius: 2px;
+  padding: 2px;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.5);
+  position: relative;
+  overflow: hidden;
 }
 
-@keyframes spin {
+.spinner::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: 16px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    #0078d4 0px,
+    #0078d4 8px,
+    #f0f0f0 8px,
+    #f0f0f0 10px,
+    #0078d4 10px,
+    #0078d4 18px,
+    #f0f0f0 18px,
+    #f0f0f0 20px,
+    #0078d4 20px,
+    #0078d4 28px,
+    #f0f0f0 28px,
+    #f0f0f0 350px
+  );
+  animation: windowsXpProgress 1.5s linear infinite;
+  border-radius: 1px;
+}
+
+@keyframes windowsXpProgress {
   0% {
-    transform: rotate(0deg);
+    transform: translateX(-30px);
   }
   100% {
-    transform: rotate(360deg);
+    transform: translateX(280px);
   }
 }
 

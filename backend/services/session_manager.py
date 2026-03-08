@@ -5,7 +5,7 @@ Manages the lifecycle of all active GameSession instances.
 
 from typing import Dict, Optional, List, Union
 from datetime import datetime, timedelta, timezone
-from backend.services.game_session import GameSession, GameMode
+from services.game_session import GameSession, GameMode
 import uuid
 
 # Forward imports to avoid circular dependency

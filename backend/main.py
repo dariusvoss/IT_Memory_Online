@@ -44,7 +44,7 @@ def on_players_matched(match: Match):
     # Create game session correctly!
     session_id  = session_manager.create_session(
         player_ids=match.player_ids,
-        difficulty="medium",
+        difficulty="none",
         board_size=match.deck_size,
         game_mode=GameMode.MULTIPLAYER
     )
@@ -611,7 +611,7 @@ def verify_player_id(request: Request):
 def join_queue(data: dict):
     """Join the matchmaking queue"""
     player_id = data.get("player_id")
-    deck_size = data.get("deck_size")  # <– neu
+    deck_size = data.get("deck_size") 
     if matchmaker.join_queue(player_id, deck_size):
         return {
             "status": "joined",
