@@ -37,7 +37,8 @@ def on_players_matched(match: Match):
         player_ids=match.player_ids,
         difficulty="None",
         board_size=match.deck_size,
-        game_mode=GameMode.MULTIPLAYER
+        game_mode=GameMode.MULTIPLAYER,
+        bonus_effekt=match.bonus_effekt
     )
     match.game_session_id = session_id
 
@@ -58,7 +59,8 @@ def create_game(request: CreateGameRequest):
             player_ids=request.player_ids,
             difficulty=request.difficulty,
             board_size=request.board_size,
-            game_mode=request.game_mode
+            game_mode=request.game_mode,
+            bonus_effekt=request.bonus_effekt
         )
 
         session = session_manager.get_session(session_id)
@@ -191,7 +193,7 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
             card_positions.append(idx)
 
         # Check if this reveals a match
-        is_match, matched_positions = session.check_match()
+        is_match, matched_positions, bonus_triggered = session.check_match()
 
         return {
             "status": "success",
@@ -205,6 +207,8 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
             "current_player": session.current_player_turn,
             "player_points": session.player_points,
             "pairs_found": session.pairs_found,
+            "bonus_triggered": bonus_triggered,
+            "round_counter": session.round_counter,
             "game_mode": session.game_mode.value,
             "is_player_turn": (
                 session.current_player_turn == session.player_ids[0]
@@ -248,7 +252,9 @@ def bot_move(session_id: str = Path(...)):
                 "cards": serialize_cards(session.cards),
                 "player_points": session.player_points,
                 "pairs_found": session.pairs_found,
-                "current_player": session.current_player_turn
+                "current_player": session.current_player_turn,
+                "bonus_triggered": move.get("bonus_triggered", False),
+                "round_counter": move.get("round_counter", session.round_counter)
             }
         else:
             return {
@@ -578,12 +584,14 @@ def verify_player_id(request: Request):
 def join_queue(data: dict):
     """Join the matchmaking queue"""
     player_id = data.get("player_id")
-    deck_size = data.get("deck_size") 
-    if matchmaker.join_queue(player_id, deck_size):
+    deck_size = data.get("deck_size")
+    bonus_effekt = bool(data.get("bonus_effekt", False))
+    if matchmaker.join_queue(player_id, deck_size, bonus_effekt):
         return {
             "status": "joined",
             "queue_size": matchmaker.get_queue_size(),
-            "player_deck_size": matchmaker.player_deck_size.get(player_id)
+            "player_deck_size": matchmaker.player_deck_size.get(player_id),
+            "bonus_effekt": matchmaker.player_bonus_effekt.get(player_id, bonus_effekt)
             }
     else:
         return {"status": "error", "message": "Already in queue or in a match"}
@@ -593,7 +601,8 @@ def leave_queue(data: dict):
     """Leave the matchmaking queue"""
     player_id = data.get("player_id")
     deck_size = data.get("deck_size")
-    success = matchmaker.leave_queue(player_id, deck_size)
+    bonus_effekt = data.get("bonus_effekt")
+    success = matchmaker.leave_queue(player_id, deck_size, bonus_effekt)
     return {
         "status": "success" if success else "error",
         "message": "Left queue" if success else "Not in queue"
@@ -615,6 +624,7 @@ def get_matchmaking_status(player_id: str):
             "match_id": match.match_id,
             "opponent": [p for p in match.player_ids if p != player_id],
             "game_session_id": match.game_session_id,
+            "bonus_effekt": match.bonus_effekt,
             "session": session.to_dict() if session else None
         }
     elif matchmaker.is_player_in_queue(player_id):
@@ -622,6 +632,7 @@ def get_matchmaking_status(player_id: str):
             "status": "waiting",
             "queue_position": "matchmaker.get_queue_position(player_id)",
             "player_deck_size": matchmaker.player_deck_size.get(player_id),
+            "bonus_effekt": matchmaker.player_bonus_effekt.get(player_id, False),
             "queue_size": matchmaker.get_queue_size()
         }
     else:

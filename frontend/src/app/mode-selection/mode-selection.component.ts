@@ -21,6 +21,7 @@ import { GameService } from '../shared/services/game.service';
 export class GameModeSelectionComponent {
   selectedMode: 'none' | 'singleplayer' | 'multiplayer' = 'none';
   multiplayerState: 'idle' | 'searching' | 'active' = 'idle';
+  bonus_effekt = false;
   private selectedSize: number = -1; // Standard size
   pollingInterval: ReturnType<typeof setInterval> | undefined;
   activeSessionId: string | null = null;
@@ -33,7 +34,9 @@ export class GameModeSelectionComponent {
     private http: HttpClient,
     private modalService: NgbModal,
     private sessionService: SessionService
-  ) {}
+  ) {
+    this.bonus_effekt = this.gameService.bonusEffektEnabled;
+  }
 
   chooseSize() {
       const modalRef_size = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
@@ -42,7 +45,11 @@ export class GameModeSelectionComponent {
         if (result) {
           this.selectedSize = result;
           this.multiplayerState = 'searching';
-          this.http.post(`${environment.apiUrl}/matchmaking/join-queue`, { player_id: environment.playerId, deck_size: this.selectedSize })
+          this.http.post(`${environment.apiUrl}/matchmaking/join-queue`, {
+            player_id: environment.playerId,
+            deck_size: this.selectedSize,
+            bonus_effekt: this.gameService.bonusEffektEnabled
+          })
         .subscribe({
           next: response => console.log('Player joined queue response:', response),
           error: err => console.error('Error joining queue:', err)
@@ -132,6 +139,11 @@ export class GameModeSelectionComponent {
     this.selectedMode = 'multiplayer';
     this.selectedModeChange.emit(this.selectedMode);
     this.checkMultiplayerState();
+  }
+
+  toggleBonusEffekt(): void {
+    this.bonus_effekt = !this.bonus_effekt;
+    this.gameService.setBonusEffekt(this.bonus_effekt);
   }
 
   private checkMultiplayerState(): void {

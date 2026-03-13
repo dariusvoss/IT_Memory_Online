@@ -37,7 +37,8 @@ class GameSessionManager:
         player_ids: List[str],
         difficulty: str,
         board_size: int,
-        game_mode: Optional[Union['GameMode', str]] = None
+        game_mode: Optional[Union['GameMode', str]] = None,
+        bonus_effekt: bool = False
     ) -> str:
         """
         Create and register a new game session.
@@ -79,7 +80,8 @@ class GameSessionManager:
             player_ids=player_ids,
             difficulty=difficulty,
             board_size=board_size,
-            game_mode=game_mode
+            game_mode=game_mode,
+            bonus_effekt=bonus_effekt
         )
         # Initialize game (create and shuffle cards)
         session.initialize_game()
@@ -185,6 +187,7 @@ class GameSessionManager:
                 'game_mode': session.game_mode.value,
                 'difficulty': session.difficulty,
                 'board_size': session.board_size,
+                'bonus_effekt': session.bonus_effekt,
                 'pairs_found': session.pairs_found,
                 'players': session.player_ids,
                 'current_turn': session.current_player_turn,

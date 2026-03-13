@@ -30,6 +30,7 @@ class Match(BaseModel):
     status: MatchStatus = MatchStatus.MATCHED
     game_session_id: Optional[str] = None
     deck_size: Optional[int] = None  # Kartensatzgröße
+    bonus_effekt: bool = False
     metadata: Dict = Field(default_factory=dict)
 
 
@@ -48,13 +49,15 @@ class Matchmaker:
     """
 
     def __init__(self):
-        self.queue: Dict[int, List[str]] = {}  # deck_size -> [player_ids]
+        self.queue: Dict[tuple[int, bool], List[str]] = {}  # (deck_size, bonus_effekt) -> [player_ids]
         self.matches: Dict[str, Match] = {}
         self.player_to_match: Dict[str, str] = {}  # player_id -> match_id
-        self.player_deck_size: Dict[str, int] = {}  # player_id -> deck_size <– neu
+        self.player_deck_size: Dict[str, int] = {}  # player_id -> deck_size
+        self.player_bonus_effekt: Dict[str, bool] = {}  # player_id -> bonus flag
+        self.player_queue_key: Dict[str, tuple[int, bool]] = {}  # player_id -> queue key
         self._match_callback: Optional[Callable] = None
 
-    def join_queue(self, player_id: str, deck_size: int) -> bool:
+    def join_queue(self, player_id: str, deck_size: int, bonus_effekt: bool = False) -> bool:
         """
         Add a player to the matchmaking queue.
         Automatically triggers matching if 2 players are available.
@@ -73,16 +76,20 @@ class Matchmaker:
         if self.is_player_in_queue(player_id) or self.is_player_matched(player_id):
             return False
 
-        # Initialisiere Queue für diese Kartensatzgröße wenn nötig
-        if deck_size not in self.queue:
-            self.queue[deck_size] = []
+        queue_key = (deck_size, bonus_effekt)
 
-        self.queue[deck_size].append(player_id)
-        self.player_deck_size[player_id] = deck_size  # <– speichern
-        self._try_match(deck_size)
+        # Initialisiere Queue für diese Einstellungen wenn nötig
+        if queue_key not in self.queue:
+            self.queue[queue_key] = []
+
+        self.queue[queue_key].append(player_id)
+        self.player_deck_size[player_id] = deck_size
+        self.player_bonus_effekt[player_id] = bonus_effekt
+        self.player_queue_key[player_id] = queue_key
+        self._try_match(queue_key)
         return True
 
-    def leave_queue(self, player_id: str, deck_size: int = None) -> bool:
+    def leave_queue(self, player_id: str, deck_size: int = None, bonus_effekt: Optional[bool] = None) -> bool:
         """
         Remove a player from the queue.
 
@@ -93,15 +100,17 @@ class Matchmaker:
         Returns:
             True if player was removed, False if not found
         """
-        if player_id in self.player_deck_size:
-            deck_size = self.player_deck_size[player_id]
-            if deck_size not in self.queue:
+        if player_id in self.player_queue_key:
+            queue_key = self.player_queue_key[player_id]
+            if queue_key not in self.queue:
                 return False
-            if player_id in self.queue[deck_size]:
-                self.queue[deck_size].remove(player_id)
-                if not self.queue[deck_size]:
-                    del self.queue[deck_size]
+            if player_id in self.queue[queue_key]:
+                self.queue[queue_key].remove(player_id)
+                if not self.queue[queue_key]:
+                    del self.queue[queue_key]
                 del self.player_deck_size[player_id]
+                self.player_bonus_effekt.pop(player_id, None)
+                del self.player_queue_key[player_id]
                 return True
         return False
 
@@ -113,37 +122,42 @@ class Matchmaker:
         """Check if player is already matched in a game"""
         return player_id in self.player_to_match
 
-    def get_queue(self) -> Dict[int, List[str]]:
+    def get_queue(self) -> Dict[str, List[str]]:
         """Get current queue as a copy"""
-        return {k: v.copy() for k, v in self.queue.items()}
+        return {
+            f"deck_{deck_size}_bonus_{str(bonus_effekt).lower()}": players.copy()
+            for (deck_size, bonus_effekt), players in self.queue.items()
+        }
 
     def get_queue_size(self) -> int:
         """Get number of players waiting in queue"""
         return sum(len(players) for players in self.queue.values())
 
-    def _try_match(self, deck_size: int) -> Optional[Match]:
+    def _try_match(self, queue_key: tuple[int, bool]) -> Optional[Match]:
         """
         Try to match players mit der gleichen Kartensatzgröße.
 
         Args:
-            deck_size: Kartensatzgröße
+            queue_key: (deck_size, bonus_effekt)
 
         Returns:
             Match object if successful, None otherwise
         """
-        if deck_size not in self.queue or len(self.queue[deck_size]) < 2:
+        if queue_key not in self.queue or len(self.queue[queue_key]) < 2:
             return None
 
+        deck_size, bonus_effekt = queue_key
+
         # Get first two players from queue
-        player_a = self.queue[deck_size].pop(0)
-        player_b = self.queue[deck_size].pop(0)
+        player_a = self.queue[queue_key].pop(0)
+        player_b = self.queue[queue_key].pop(0)
 
         # Leere Queue entfernen
-        if not self.queue[deck_size]:
-            del self.queue[deck_size]
+        if not self.queue[queue_key]:
+            del self.queue[queue_key]
 
         # Create match
-        match = self._create_match([player_a, player_b], deck_size)
+        match = self._create_match([player_a, player_b], deck_size, bonus_effekt)
 
         # Register match
         self.matches[match.match_id] = match
@@ -153,6 +167,10 @@ class Matchmaker:
         # Clean up player_deck_size
         del self.player_deck_size[player_a]
         del self.player_deck_size[player_b]
+        self.player_bonus_effekt.pop(player_a, None)
+        self.player_bonus_effekt.pop(player_b, None)
+        self.player_queue_key.pop(player_a, None)
+        self.player_queue_key.pop(player_b, None)
 
         # Trigger callback if registered
         if self._match_callback:
@@ -160,14 +178,15 @@ class Matchmaker:
 
         return match
 
-    def _create_match(self, player_ids: List[str], deck_size: int) -> Match:
+    def _create_match(self, player_ids: List[str], deck_size: int, bonus_effekt: bool) -> Match:
         """Create a new match object"""
         match_id = str(uuid.uuid4())
         return Match(
             match_id=match_id,
             player_ids=player_ids,
             created_at=datetime.now(),
-            deck_size=deck_size
+            deck_size=deck_size,
+            bonus_effekt=bonus_effekt
         )
 
     def on_matched(self, callback: Callable[[Match], None]) -> None:
@@ -289,7 +308,10 @@ class Matchmaker:
             Dictionary with queue size, matched count, etc.
         """
         return {
-            "queue_by_deck_size": {k: len(v) for k, v in self.queue.items()},
+            "queue_by_settings": {
+                f"deck_{deck_size}_bonus_{str(bonus_effekt).lower()}": len(players)
+                for (deck_size, bonus_effekt), players in self.queue.items()
+            },
             "total_queue_size": sum(
                 len(players) for players in self.queue.values()
             ),

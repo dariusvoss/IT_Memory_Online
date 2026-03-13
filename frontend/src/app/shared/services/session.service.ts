@@ -40,13 +40,15 @@ export class SessionService {
     playerIds: string[],
     difficulty: string,
     boardSize: number,
-    gameMode: string = 'singleplayer_time'
+    gameMode: string = 'singleplayer_time',
+    bonusEffekt: boolean = false
   ): Observable<any> {
     const request = {
       player_ids: playerIds,
       difficulty: difficulty,
       board_size: boardSize,
-      game_mode: gameMode
+      game_mode: gameMode,
+      bonus_effekt: bonusEffekt
     };
 
     return this.http.post(`${this.apiUrl}/create`, request).pipe(

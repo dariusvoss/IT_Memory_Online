@@ -39,7 +39,8 @@ class GameSession:
         player_ids: List[str],
         difficulty: str,
         board_size: int,
-        game_mode: GameMode = GameMode.SINGLEPLAYER_TIME
+        game_mode: GameMode = GameMode.SINGLEPLAYER_TIME,
+        bonus_effekt: bool = False
     ):
         # ==================== Session Management ====================
         self.session_id = session_id
@@ -57,6 +58,7 @@ class GameSession:
         self.game_mode = game_mode
         self.difficulty = difficulty
         self.board_size = board_size
+        self.bonus_effekt = bonus_effekt
         self.selected_images: List[str] = []  # Selected card images for this session
         
         # ==================== Game State ====================
@@ -92,6 +94,9 @@ class GameSession:
         
         # ==================== Move Finalization ====================
         self.last_unmatched_cards: List[int] = []  # Cards that need to be flipped back when finalized
+        self.round_counter = 0
+        self.bonus_trigger_count = 0
+        self.last_bonus_trigger_round: Optional[int] = None
     
     # ==================== Card Initialization ====================
     
@@ -133,6 +138,9 @@ class GameSession:
         self.matched_pairs = []
         self.started_at = None
         self.ended_at = None
+        self.round_counter = 0
+        self.bonus_trigger_count = 0
+        self.last_bonus_trigger_round = None
         
         # Initialize bot if needed
         if self.bot_ai:
@@ -187,17 +195,17 @@ class GameSession:
         
         return True
     
-    def check_match(self) -> Tuple[bool, List[int]]:
+    def check_match(self) -> Tuple[bool, List[int], bool]:
         """
         Check if the two selected cards match.
         Handles scoring and turn switching.
         NOTE: Does NOT flip cards back on mismatch - Frontend handles card flipping animation.
         
         Returns:
-            Tuple of (is_match: bool, card_positions: List[int])
+            Tuple of (is_match: bool, card_positions: List[int], bonus_triggered: bool)
         """
         if len(self.selected_cards) < 2:
-            return False, []
+            return False, [], False
 
         # Extract card index and card from tuples
         idx1, card1 = self.selected_cards[0]
@@ -228,7 +236,23 @@ class GameSession:
         # Clear selected cards
         self.selected_cards = []
 
-        return is_pair, [idx1, idx2]
+        # A round is complete after two cards were processed.
+        self.round_counter += 1
+        bonus_triggered = self._evaluate_bonus_trigger()
+
+        return is_pair, [idx1, idx2], bonus_triggered
+
+    def _evaluate_bonus_trigger(self) -> bool:
+        """Trigger bonus every 3 rounds when bonus mode is enabled."""
+        if not self.bonus_effekt:
+            return False
+
+        if self.round_counter > 0 and self.round_counter % 3 == 0:
+            self.bonus_trigger_count += 1
+            self.last_bonus_trigger_round = self.round_counter
+            return True
+
+        return False
 
     def match_cards(self, card1, card2, idx1, idx2):
         # Mark cards as matched
@@ -347,14 +371,16 @@ class GameSession:
             self.bot_ai.remember_card(second_idx, second_card.id, seen_by='bot')
 
         # Check if bot's cards match (important: must be done here!)
-        is_match, matched_positions = self.check_match()
+        is_match, matched_positions, bonus_triggered = self.check_match()
 
         return {
             'type': 'bot_move',
             'first_card': first_idx,
             'second_card': second_idx,
             'is_pair': is_match,
-            'matched_positions': matched_positions
+            'matched_positions': matched_positions,
+            'bonus_triggered': bonus_triggered,
+            'round_counter': self.round_counter
         }
     
     # ==================== Scoring & Ranking ====================
@@ -531,6 +557,10 @@ class GameSession:
             "game_mode": self.game_mode.value,
             "difficulty": self.difficulty,
             "board_size": self.board_size,
+            "bonus_effekt": self.bonus_effekt,
+            "round_counter": self.round_counter,
+            "bonus_trigger_count": self.bonus_trigger_count,
+            "last_bonus_trigger_round": self.last_bonus_trigger_round,
             "current_player": self.current_player_turn,
             "player_ids": self.player_ids,
             "cards": [card.model_dump() for card in self.cards],

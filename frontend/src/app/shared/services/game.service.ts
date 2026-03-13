@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { TimerService } from './timer.service';
 import { SessionService } from './session.service';
 import { FinishDialogComponent } from '../../mode-selection/game/board/finish-dialog/finish-dialog.component';
+import { BonusEffectDialogComponent } from '../../mode-selection/game/board/bonus-effect-dialog/bonus-effect-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map, mergeMap, catchError, finalize } from 'rxjs/operators';
@@ -57,6 +58,8 @@ export class GameService {
   private multiplayerPollingInterval: any = null;
   private isProcessingLocalAction: boolean = false;
   private finishDialogShown: boolean = false;
+  private bonusEffekt = false;
+  private lastSeenBonusTriggerCount = 0;
 
   // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -89,6 +92,14 @@ export class GameService {
 
   public get gameModeGetter(): GameModeType {
     return this.currentGameMode;
+  }
+
+  public get bonusEffektEnabled(): boolean {
+    return this.bonusEffekt;
+  }
+
+  public setBonusEffekt(enabled: boolean): void {
+    this.bonusEffekt = enabled;
   }
 
   private get localPlayerId(): string {
@@ -155,7 +166,8 @@ export class GameService {
           [this.localPlayerId], // Player ID
           this.difficulty,
           cardCount,
-          gameMode
+          gameMode,
+          this.bonusEffekt
         );
       }),
       catchError((error: any) => {
@@ -165,7 +177,8 @@ export class GameService {
           [this.localPlayerId],
           this.difficulty,
           cardCount,
-          gameMode
+          gameMode,
+          this.bonusEffekt
         );
       }),
       tap((response: any) => {
@@ -185,6 +198,7 @@ export class GameService {
           this.pairsFound = 0;
           this.pairsFoundPlayer = 0;
           this.pairsFoundBot = 0;
+          this.lastSeenBonusTriggerCount = sessionData.bonus_trigger_count || 0;
           this.gameStarted = true;
           this.isPlayerTurn = true;
 
@@ -221,6 +235,7 @@ export class GameService {
         this.gameStarted = true;
         this.gameInitialized = state.status === 'active';
         this.finishDialogShown = false;
+        this.lastSeenBonusTriggerCount = state.bonus_trigger_count || 0;
         this.isPlayerTurn = state.current_player
           ? state.current_player === this.localPlayerId
           : true;
@@ -318,6 +333,7 @@ export class GameService {
     this.lastFlipResponse = null;
     this.sessionId = '';
     this.currentGameMode = 'singleplayer_time';
+    this.lastSeenBonusTriggerCount = 0;
     console.log('Local game state reset');
   }
 
@@ -408,6 +424,9 @@ export class GameService {
 
         // Check if two cards are selected
         if (response.selected_cards_count >= 2) {
+          if (response.bonus_triggered) {
+            this.handleBonusTrigger();
+          }
           setTimeout(() => this.checkMatch(response), this.actionDelay);
           console.log('Two cards flipped, checking for match after delay');
         } else {
@@ -733,6 +752,10 @@ export class GameService {
             this.cardsSubject.next(this.cards);
           }
 
+          if (response.bonus_triggered) {
+            this.handleBonusTrigger();
+          }
+
           console.log('Bot move executed. Is match:', isBotMatch, '| Player points:', this.pairsFoundPlayer, '| Bot points:', this.pairsFoundBot);
 
           // Check if bot found a match (use isBotMatch, not response.is_match)
@@ -854,6 +877,11 @@ export class GameService {
           // Update points
           this.updatePointsFromState(state.player_points);
 
+          if (typeof state.bonus_trigger_count === 'number' && state.bonus_trigger_count > this.lastSeenBonusTriggerCount) {
+            this.lastSeenBonusTriggerCount = state.bonus_trigger_count;
+            this.openBonusEffectDialog();
+          }
+
           // Check if game finished
           if (state.finished) {
             console.log('[Multiplayer Polling] Game finished detected');
@@ -877,6 +905,15 @@ export class GameService {
       clearInterval(this.multiplayerPollingInterval);
       this.multiplayerPollingInterval = null;
     }
+  }
+
+  private handleBonusTrigger(): void {
+    this.lastSeenBonusTriggerCount += 1;
+    this.openBonusEffectDialog();
+  }
+
+  private openBonusEffectDialog(): void {
+    this.modalService.open(BonusEffectDialogComponent, { centered: true, size: 'sm' });
   }
 
   /**

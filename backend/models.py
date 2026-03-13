@@ -85,6 +85,7 @@ class CreateGameRequest(BaseModel):
     difficulty: str  # 'Leicht', 'Mittel', 'Schwer'
     board_size: int  # 16, 36, 64
     game_mode: str = 'singleplayer_time'  # 'singleplayer_time', 'singleplayer_ai', 'multiplayer'
+    bonus_effekt: bool = False
 
 
 class FlipCardRequest(BaseModel):
