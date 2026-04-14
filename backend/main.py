@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Body, Path
+from fastapi import FastAPI, HTTPException, Request, Body, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict
 import json
@@ -8,7 +8,7 @@ import uuid
 from fastapi.responses import JSONResponse
 from services.matchmaker import matchmaker, Match
 from services.session_manager import GameSessionManager
-from models import GameRecord, CreateGameRequest, FlipCardRequest, GameMode, GameStatus
+from models import BonusTriggerRequest, GameRecord, CreateGameRequest, FlipCardRequest, GameMode, GameStatus
 from config import CORS_ORIGINS, API_PREFIX, API_VERSION
 
 app = FastAPI(title="Memory Game Backend", version=API_VERSION)
@@ -25,6 +25,12 @@ app.add_middleware(
 # Initialize services
 session_manager = GameSessionManager() #(session_timeout_minutes=30)
 multiplayer_finish_ack: Dict[str, set] = {}
+
+
+def serialize_session_state(session, player_id: Optional[str] = None) -> dict:
+    if player_id and player_id in session.player_ids:
+        return session.get_player_view(player_id)
+    return session.to_dict()
 
 
 # Register matchmaker callback
@@ -67,30 +73,30 @@ def create_game(request: CreateGameRequest):
         return {
             "status": "success",
             "session_id": session_id,
-            "data": session.to_dict()
+            "data": serialize_session_state(session, request.player_ids[0] if request.player_ids else None)
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}")
-def get_session_state(session_id: str = Path(...)):
+def get_session_state(session_id: str = Path(...), player_id: Optional[str] = Query(default=None)):
     """Get current state of a game session"""
     if session := session_manager.get_session(session_id):
         return {
             "status": "success",
-            "data": session.to_dict()
+            "data": serialize_session_state(session, player_id)
         }
     else:
         raise HTTPException(status_code=404, detail="Session not found")
 
 @app.get(f"{API_PREFIX}/session/{{session_id}}/details")
-def get_session_details(session_id: str = Path(...)):
+def get_session_details(session_id: str = Path(...), player_id: Optional[str] = Query(default=None)):
     """Get detailed state of a game session (including move history)"""
     session = session_manager.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    session_data = session.to_dict()
+    session_data = serialize_session_state(session, player_id)
     session_data["move_history"] = session.get_move_history()
     
     return {
@@ -133,7 +139,7 @@ def reset_game(session_id: str = Path(...)):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 @app.post(f"{API_PREFIX}/session/{{session_id}}/finalize-move")
-def finalize_move(session_id: str = Path(...)):
+def finalize_move(session_id: str = Path(...), data: Optional[dict] = Body(default=None)):
     """
     Finalize the current move.
     Called by Frontend after cardVisibilityDuration.
@@ -145,10 +151,11 @@ def finalize_move(session_id: str = Path(...)):
 
     try:
         session.finalize_move()
+        player_id = data.get("player_id") if data else None
         return {
             "status": "success",
             "message": "Move finalized",
-            "data": session.to_dict()
+            "data": serialize_session_state(session, player_id)
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -174,6 +181,7 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
+        requesting_player_id = request.player_id or session.current_player_turn
         success = session.flip_card(session.current_player_turn, request.card_index)
 
         if not success:
@@ -210,6 +218,7 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
             "bonus_triggered": bonus_triggered,
             "round_counter": session.round_counter,
             "game_mode": session.game_mode.value,
+            "player_bonus_state": session.get_player_bonus_state(requesting_player_id),
             "is_player_turn": (
                 session.current_player_turn == session.player_ids[0]
                 if session.player_ids
@@ -223,6 +232,24 @@ def flip_card(session_id: str = Path(...), request: FlipCardRequest = None):
             ),
         }
     except (ValueError, IndexError) as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post(f"{API_PREFIX}/session/{{session_id}}/bonus/trigger")
+def trigger_bonus_effect(session_id: str = Path(...), request: BonusTriggerRequest = None):
+    session = session_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    try:
+        result = session.trigger_bonus_effect(request.player_id, request.effect_id)
+        return {
+            "status": "success",
+            "message": "Bonus effect triggered",
+            "bonus_result": result,
+            "data": serialize_session_state(session, request.player_id)
+        }
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 @app.post(f"{API_PREFIX}/session/{{session_id}}/bot-move")
@@ -254,7 +281,8 @@ def bot_move(session_id: str = Path(...)):
                 "pairs_found": session.pairs_found,
                 "current_player": session.current_player_turn,
                 "bonus_triggered": move.get("bonus_triggered", False),
-                "round_counter": move.get("round_counter", session.round_counter)
+                "round_counter": move.get("round_counter", session.round_counter),
+                "player_bonus_state": session.get_player_bonus_state(session.player_ids[0])
             }
         else:
             return {
@@ -287,7 +315,8 @@ def check_win(session_id: str = Path(...)):
                 "difficulty": session.difficulty,
                 "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0,
                 "finish_reason": session.metadata.get("finish_reason"),
-                "quitter_id": session.metadata.get("quitter_id")
+                "quitter_id": session.metadata.get("quitter_id"),
+                "tie_break": session.metadata.get("tie_break")
             }
 
         if is_won := session.check_win():
@@ -301,7 +330,8 @@ def check_win(session_id: str = Path(...)):
                 "difficulty": session.difficulty,
                 "time": session.elapsed_time if hasattr(session, 'elapsed_time') else 0,
                 "finish_reason": session.metadata.get("finish_reason"),
-                "quitter_id": session.metadata.get("quitter_id")
+                "quitter_id": session.metadata.get("quitter_id"),
+                "tie_break": session.metadata.get("tie_break")
             }
 
             # Only calculate rank for time-based mode
@@ -625,7 +655,7 @@ def get_matchmaking_status(player_id: str):
             "opponent": [p for p in match.player_ids if p != player_id],
             "game_session_id": match.game_session_id,
             "bonus_effekt": match.bonus_effekt,
-            "session": session.to_dict() if session else None
+            "session": serialize_session_state(session, player_id) if session else None
         }
     elif matchmaker.is_player_in_queue(player_id):
         return {

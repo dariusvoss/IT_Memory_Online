@@ -20,6 +20,36 @@ export interface GameCard {
   matched: boolean;
 }
 
+export interface BonusEffectInfo {
+  id: string;
+  label: string;
+  description: string;
+  category: string;
+  utility_weight: number;
+  auto_trigger: boolean;
+  metadata?: { [key: string]: number };
+}
+
+export interface BonusNotification {
+  id: number;
+  type: 'effect_ready' | 'effect_auto_used' | 'effect_used';
+  round: number;
+  title: string;
+  message: string;
+  effect: BonusEffectInfo;
+}
+
+export interface PlayerBonusState {
+  bonus_enabled: boolean;
+  trigger_interval: number;
+  ready_effects: BonusEffectInfo[];
+  used_effects: BonusEffectInfo[];
+  remaining_pool_size: number;
+  can_trigger: boolean;
+  notifications: BonusNotification[];
+  time_bonus_seconds_used: number;
+}
+
 // Message templates to avoid emoji rendering issues
 const WIN_MESSAGES = {
   playerWon: 'Glückwunsch! Du hast gewonnen!',
@@ -60,6 +90,7 @@ export class GameService {
   private finishDialogShown: boolean = false;
   private bonusEffekt = false;
   private lastSeenBonusTriggerCount = 0;
+  private seenBonusNotificationIds = new Set<number>();
 
   // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -67,6 +98,9 @@ export class GameService {
 
   private gameStateSubject = new BehaviorSubject<any>(null);
   public gameState$ = this.gameStateSubject.asObservable();
+
+  private bonusStateSubject = new BehaviorSubject<PlayerBonusState | null>(null);
+  public bonusState$ = this.bonusStateSubject.asObservable();
 
   constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService initialized');
@@ -96,6 +130,26 @@ export class GameService {
 
   public get bonusEffektEnabled(): boolean {
     return this.bonusEffekt;
+  }
+
+  public get currentBonusState(): PlayerBonusState | null {
+    return this.bonusStateSubject.value;
+  }
+
+  public get showManualBonusButton(): boolean {
+    return this.bonusEffekt;
+  }
+
+  public get canTriggerBonusEffect(): boolean {
+    return !!this.currentBonusState?.can_trigger;
+  }
+
+  public get readyBonusEffectLabel(): string {
+    return this.currentBonusState?.ready_effects?.[0]?.label || 'Bonuseffekt';
+  }
+
+  public get readyBonusEffectDescription(): string {
+    return this.currentBonusState?.ready_effects?.[0]?.description || 'Sobald ein Effekt bereit ist, kannst du ihn hier auslösen.';
   }
 
   public setBonusEffekt(enabled: boolean): void {
@@ -199,6 +253,8 @@ export class GameService {
           this.pairsFoundPlayer = 0;
           this.pairsFoundBot = 0;
           this.lastSeenBonusTriggerCount = sessionData.bonus_trigger_count || 0;
+          this.seenBonusNotificationIds.clear();
+          this.updateBonusState(sessionData.player_bonus_state || null);
           this.gameStarted = true;
           this.isPlayerTurn = true;
 
@@ -236,6 +292,8 @@ export class GameService {
         this.gameInitialized = state.status === 'active';
         this.finishDialogShown = false;
         this.lastSeenBonusTriggerCount = state.bonus_trigger_count || 0;
+        this.seenBonusNotificationIds.clear();
+        this.updateBonusState(state.player_bonus_state || null);
         this.isPlayerTurn = state.current_player
           ? state.current_player === this.localPlayerId
           : true;
@@ -281,6 +339,8 @@ export class GameService {
         }
         this.currentGameMode = 'singleplayer_time';
         this.finishDialogShown = false;
+        this.updateBonusState(null);
+        this.seenBonusNotificationIds.clear();
 
         console.log('Game reset');
       })
@@ -334,7 +394,27 @@ export class GameService {
     this.sessionId = '';
     this.currentGameMode = 'singleplayer_time';
     this.lastSeenBonusTriggerCount = 0;
+    this.updateBonusState(null);
+    this.seenBonusNotificationIds.clear();
     console.log('Local game state reset');
+  }
+
+  private updateBonusState(state: PlayerBonusState | null | undefined): void {
+    const normalizedState = state || null;
+    this.bonusStateSubject.next(normalizedState);
+
+    if (!normalizedState?.notifications?.length) {
+      return;
+    }
+
+    const unseenNotifications = normalizedState.notifications.filter(
+      (notification) => !this.seenBonusNotificationIds.has(notification.id)
+    );
+
+    unseenNotifications.forEach((notification) => {
+      this.seenBonusNotificationIds.add(notification.id);
+      this.openBonusEffectDialog(notification);
+    });
   }
 
   /**
@@ -407,6 +487,7 @@ export class GameService {
       (response: any) => {
         // Store response for checkMatch
         this.lastFlipResponse = response;
+        this.updateBonusState(response.player_bonus_state || null);
 
         // Update local state from response
         if (response.cards) {
@@ -424,9 +505,6 @@ export class GameService {
 
         // Check if two cards are selected
         if (response.selected_cards_count >= 2) {
-          if (response.bonus_triggered) {
-            this.handleBonusTrigger();
-          }
           setTimeout(() => this.checkMatch(response), this.actionDelay);
           console.log('Two cards flipped, checking for match after delay');
         } else {
@@ -527,6 +605,7 @@ export class GameService {
             if (response.data) {
               this.cards = response.data.cards;
               this.cardsSubject.next(this.cards);
+              this.updateBonusState(response.data.player_bonus_state || null);
             }
 
             // Update turn state for multiplayer
@@ -535,9 +614,17 @@ export class GameService {
               console.log('[Multiplayer FinalizeMove] Current player:', response.data.current_player, '| Local player:', this.localPlayerId, '| Is my turn:', this.isPlayerTurn);
             }
 
-            // Switch turns for bot mode
+            // Switch turns based on backend current_player (respects skip_turn effect)
             if (this.currentGameMode === 'singleplayer_ai') {
-              this.switchTurn();
+              const nextPlayer = response.data?.current_player;
+              if (nextPlayer && nextPlayer !== this.localPlayerId) {
+                // Bot's turn (normal case or player's skip was ineffective)
+                this.isPlayerTurn = false;
+                setTimeout(() => this.botMove(), this.actionDelay);
+              } else {
+                // Player's turn again (bot was skipped by Aussetzen)
+                this.isPlayerTurn = true;
+              }
             }
             this.isProcessingLocalAction = false;
           },
@@ -601,6 +688,10 @@ export class GameService {
               modalRef.componentInstance.message = WIN_MESSAGES.playerWon;
             } else if (this.pairsFoundPlayer < this.pairsFoundBot) {
               modalRef.componentInstance.message = WIN_MESSAGES.botWon;
+            } else if (response.tie_break?.resolved && response.winner === this.localPlayerId) {
+              modalRef.componentInstance.message = 'Glückwunsch! Du hast das Stechen über den geringeren Bonus-Nutzwert gewonnen!';
+            } else if (response.tie_break?.resolved && response.winner === 'bot') {
+              modalRef.componentInstance.message = 'Schade! Der Bot hat das Stechen über den geringeren Bonus-Nutzwert gewonnen!';
             } else {
               modalRef.componentInstance.message = WIN_MESSAGES.draw;
             }
@@ -608,12 +699,16 @@ export class GameService {
             if (response.winner && response.winner === this.localPlayerId) {
               if (response.finish_reason === 'player_left') {
                 modalRef.componentInstance.message = 'Glückwunsch! Du hast gewonnen, weil dein Gegner das Spiel verlassen hat!';
+              } else if (response.tie_break?.resolved) {
+                modalRef.componentInstance.message = 'Glückwunsch! Du hast das Stechen über den geringeren Bonus-Nutzwert gewonnen!';
               } else {
                 modalRef.componentInstance.message = WIN_MESSAGES.playerWon;
               }
             } else if (response.winner && response.winner !== this.localPlayerId) {
               if (response.finish_reason === 'player_left' && response.quitter_id === this.localPlayerId) {
                 modalRef.componentInstance.message = 'Du hast das Spiel verlassen.';
+              } else if (response.tie_break?.resolved) {
+                modalRef.componentInstance.message = 'Schade! Dein Gegner hat das Stechen über den geringeren Bonus-Nutzwert gewonnen!';
               } else {
                 modalRef.componentInstance.message = 'Schade! Dein Gegner hat gewonnen!';
               }
@@ -728,6 +823,7 @@ export class GameService {
         const firstCardIdx = move.first_card;
         const secondCardIdx = move.second_card;
         const isBotMatch = move.is_pair || false;
+        this.updateBonusState(response.player_bonus_state || null);
 
         // Show bot cards flipped sequentially for realistic animation
         const delayBeforeSecondCard = 800;
@@ -750,10 +846,6 @@ export class GameService {
           if (response.cards) {
             this.cards = response.cards;
             this.cardsSubject.next(this.cards);
-          }
-
-          if (response.bonus_triggered) {
-            this.handleBonusTrigger();
           }
 
           console.log('Bot move executed. Is match:', isBotMatch, '| Player points:', this.pairsFoundPlayer, '| Bot points:', this.pairsFoundBot);
@@ -779,6 +871,7 @@ export class GameService {
                   this.cardsSubject.next(this.cards);
                   // Update points from finalized session state
                   this.updatePointsFromState(finalizeResponse.data.player_points);
+                  this.updateBonusState(finalizeResponse.data.player_bonus_state || null);
                 }
 
                 // Update turn state for multiplayer after finalize
@@ -786,9 +879,21 @@ export class GameService {
                   this.isPlayerTurn = finalizeResponse.data.current_player === this.localPlayerId;
                 }
 
-                // Switch back to player
+                // Switch back to player or trigger another bot move based on backend current_player
                 setTimeout(() => {
-                  this.switchTurn();
+                  if (this.currentGameMode === 'singleplayer_ai') {
+                    const nextPlayer = finalizeResponse.data?.current_player;
+                    if (nextPlayer && nextPlayer !== this.localPlayerId) {
+                      // Bot gets another turn (player was skipped by Aussetzen)
+                      this.isPlayerTurn = false;
+                      this.botMove();
+                    } else {
+                      // Player's turn (normal case)
+                      this.isPlayerTurn = true;
+                    }
+                  } else {
+                    this.switchTurn();
+                  }
                 }, this.actionDelay);
               },
               (error: any) => {
@@ -824,7 +929,7 @@ export class GameService {
       return;
     }
 
-    this.pairsFoundPlayer = playerPoints['player1'] || 0;
+    this.pairsFoundPlayer = playerPoints[this.localPlayerId] || playerPoints['player1'] || 0;
     this.pairsFoundBot = playerPoints['bot'] || 0;
   }
 
@@ -876,11 +981,7 @@ export class GameService {
 
           // Update points
           this.updatePointsFromState(state.player_points);
-
-          if (typeof state.bonus_trigger_count === 'number' && state.bonus_trigger_count > this.lastSeenBonusTriggerCount) {
-            this.lastSeenBonusTriggerCount = state.bonus_trigger_count;
-            this.openBonusEffectDialog();
-          }
+          this.updateBonusState(state.player_bonus_state || null);
 
           // Check if game finished
           if (state.finished) {
@@ -907,13 +1008,35 @@ export class GameService {
     }
   }
 
-  private handleBonusTrigger(): void {
-    this.lastSeenBonusTriggerCount += 1;
-    this.openBonusEffectDialog();
+  public triggerReadyBonusEffect(): void {
+    const readyEffect = this.currentBonusState?.ready_effects?.[0];
+    if (!readyEffect || !this.canTriggerBonusEffect) {
+      return;
+    }
+
+    this.sessionService.triggerBonusEffect(readyEffect.id).subscribe({
+      next: (response: any) => {
+        const updatedState = response?.data?.player_bonus_state || null;
+        this.updateBonusState(updatedState);
+
+        const reducedSeconds = response?.bonus_result?.time_reduced_seconds;
+        if (typeof reducedSeconds === 'number' && reducedSeconds > 0) {
+          this.timerService.applyTimeBonus(reducedSeconds);
+        }
+      },
+      error: (error: any) => {
+        console.error('Error triggering bonus effect:', error);
+      }
+    });
   }
 
-  private openBonusEffectDialog(): void {
-    this.modalService.open(BonusEffectDialogComponent, { centered: true, size: 'sm' });
+  private openBonusEffectDialog(notification: BonusNotification): void {
+    const modalRef = this.modalService.open(BonusEffectDialogComponent, { centered: true, size: 'sm' });
+    modalRef.componentInstance.title = notification.title;
+    modalRef.componentInstance.message = notification.message;
+    modalRef.componentInstance.effectLabel = notification.effect.label;
+    modalRef.componentInstance.effectDescription = notification.effect.description;
+    modalRef.componentInstance.showTriggerHint = notification.type === 'effect_ready';
   }
 
   /**

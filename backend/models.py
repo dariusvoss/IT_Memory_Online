@@ -91,6 +91,13 @@ class CreateGameRequest(BaseModel):
 class FlipCardRequest(BaseModel):
     """Request to flip a card"""
     card_index: int
+    player_id: Optional[str] = None
+
+
+class BonusTriggerRequest(BaseModel):
+    """Request to trigger a previously assigned bonus effect"""
+    player_id: str
+    effect_id: Optional[str] = None
 
 
 # ========================= API Response Models =========================

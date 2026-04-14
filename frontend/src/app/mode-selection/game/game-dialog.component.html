@@ -66,6 +66,19 @@
         <img style="margin-left: 100px;" src="..\assets\icons\Settings.png" alt="" class="visually-hidden icon "  (click)="closeModal()">
       </div>
 
+      @if (showManualBonusButton) {
+        <button
+          class="xp-program-btn bonus-trigger-btn"
+          type="button"
+          [class.bonus-ready]="canTriggerBonusEffect"
+          [disabled]="!canTriggerBonusEffect"
+          [title]="gameService.readyBonusEffectDescription"
+          (click)="triggerBonusEffect()"
+        >
+          {{ bonusButtonLabel }}
+        </button>
+      }
+
       <button class="xp-program-btn " (click)="closeModal()">Schließen</button>
     </div>
   </div>

@@ -3,3 +3,19 @@
   margin: 0;
   font-size: 1.05rem;
 }
+
+.effect-name {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.description,
+.hint {
+  text-align: center;
+  margin: 0.75rem 0 0;
+}
+
+.hint {
+  font-size: 0.95rem;
+}

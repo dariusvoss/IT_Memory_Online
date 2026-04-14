@@ -1,0 +1,17 @@
+.message,
+.details {
+  text-align: center;
+}
+
+.message {
+  margin-bottom: 0.75rem;
+  font-size: 1.05rem;
+}
+
+.details {
+  margin: 0;
+}
+
+.dialog-actions {
+  gap: 0.75rem;
+}

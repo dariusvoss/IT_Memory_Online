@@ -64,6 +64,22 @@ export class GameDialogComponent implements OnInit, OnDestroy {
     return this.gameService.isPlayerTurn;
   }
 
+  get showManualBonusButton(): boolean {
+    return this.gameService.showManualBonusButton;
+  }
+
+  get canTriggerBonusEffect(): boolean {
+    return this.gameService.canTriggerBonusEffect;
+  }
+
+  get bonusButtonLabel(): string {
+    return this.gameService.readyBonusEffectLabel;
+  }
+
+  triggerBonusEffect(): void {
+    this.gameService.triggerReadyBonusEffect();
+  }
+
   stopResumeTimerBtn() {
     if (this.timer.isTimerRunning) {
       this.timer.stopTimer();

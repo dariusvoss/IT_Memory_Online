@@ -66,6 +66,15 @@ export class TimerService {
     this.timer$.next(this.secondsElapsed);
   }
 
+  applyTimeBonus(seconds: number): void {
+    if (seconds <= 0) {
+      return;
+    }
+
+    this.secondsElapsed = Math.max(0, this.secondsElapsed - seconds);
+    this.timer$.next(this.secondsElapsed);
+  }
+
   /**
    * Reset timer locally without backend call
    * Used when session is being deleted

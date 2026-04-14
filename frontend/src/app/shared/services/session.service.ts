@@ -75,7 +75,9 @@ export class SessionService {
       throw new Error('No active session');
     }
 
-    return this.http.get(`${this.apiUrl}/${this.currentSessionId}`).pipe(
+    return this.http.get(`${this.apiUrl}/${this.currentSessionId}`, {
+      params: { player_id: environment.playerId }
+    }).pipe(
       tap((response: any) => {
         if (response.data) {
           this.sessionStateSubject.next(response.data);
@@ -108,7 +110,8 @@ export class SessionService {
     }
 
     return this.http.post(`${this.apiUrl}/${this.currentSessionId}/flip-card`, {
-      card_index: cardIndex
+      card_index: cardIndex,
+      player_id: environment.playerId
     }).pipe(
       tap((response: any) => {
         if (response.data) {
@@ -172,12 +175,31 @@ export class SessionService {
       throw new Error('No active session');
     }
 
-    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/finalize-move`, {}).pipe(
+    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/finalize-move`, {
+      player_id: environment.playerId
+    }).pipe(
       tap((response: any) => {
         if (response.data) {
           this.sessionStateSubject.next(response.data);
         }
         console.log('Move finalized');
+      })
+    );
+  }
+
+  triggerBonusEffect(effectId?: string): Observable<any> {
+    if (!this.currentSessionId) {
+      throw new Error('No active session');
+    }
+
+    return this.http.post(`${this.apiUrl}/${this.currentSessionId}/bonus/trigger`, {
+      player_id: environment.playerId,
+      effect_id: effectId
+    }).pipe(
+      tap((response: any) => {
+        if (response.data) {
+          this.sessionStateSubject.next(response.data);
+        }
       })
     );
   }

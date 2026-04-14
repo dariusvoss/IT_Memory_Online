@@ -194,7 +194,11 @@ export class GameModeSelectionComponent {
         clearInterval(this.pollingInterval);
       }
 
-      this.http.post(`${environment.apiUrl}/matchmaking/leave-queue`, { player_id: environment.playerId, deck_size: this.selectedSize })
+      this.http.post(`${environment.apiUrl}/matchmaking/leave-queue`, {
+        player_id: environment.playerId,
+        deck_size: this.selectedSize,
+        bonus_effekt: this.bonus_effekt
+      })
       .subscribe({
         next: response => {console.log('Player left queue response:', response); this.selectedSize = -1;},
         error: err => console.error('Error leaving queue:', err)

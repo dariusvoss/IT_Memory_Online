@@ -7,9 +7,15 @@ This is the unified game logic module that combines all game mechanics.
 """
 
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import random
 from services.bot import BotAI
+from services.bonus_effects import (
+    BONUS_TRIGGER_INTERVAL,
+    build_effect_pool,
+    get_bonus_effect_definition,
+    serialize_bonus_effect,
+)
 from config import CARD_IMAGES, RANK_THRESHOLDS
 from utils import validate_card_count, format_time
 from models import (
@@ -88,15 +94,25 @@ class GameSession:
         self.elapsed_time = 0
         self.time_limit: Optional[int] = None
         self.time_expired = False
+        self.time_bonus_seconds_used = 0
         
         # ==================== Metadata ====================
-        self.metadata: Dict[str, any] = {}
+        self.metadata: Dict[str, Any] = {}
         
         # ==================== Move Finalization ====================
         self.last_unmatched_cards: List[int] = []  # Cards that need to be flipped back when finalized
         self.round_counter = 0
         self.bonus_trigger_count = 0
         self.last_bonus_trigger_round: Optional[int] = None
+        self.bonus_trigger_interval = BONUS_TRIGGER_INTERVAL
+        self.bonus_random = random.Random(f"{session_id}-bonus")
+        self.player_effect_pool: Dict[str, List[str]] = {}
+        self.player_ready_effects: Dict[str, List[str]] = {}
+        self.player_used_effects: Dict[str, List[str]] = {}
+        self.player_bonus_history: Dict[str, List[Dict[str, Any]]] = {}
+        self.player_bonus_notifications: Dict[str, List[Dict[str, Any]]] = {}
+        self.player_skip_tokens: Dict[str, int] = {}
+        self.bonus_event_counter = 0
     
     # ==================== Card Initialization ====================
     
@@ -132,19 +148,35 @@ class GameSession:
         self.status = GameStatus.WAITING  # Ensure status is WAITING when initializing
         self.finished = False
         self.selected_cards = []
+        self.last_unmatched_cards = []
         self.pairs_found = 0
         self.player_points = {pid: 0 for pid in self.player_ids}
         self.move_history = []
         self.matched_pairs = []
         self.started_at = None
         self.ended_at = None
+        self.current_turn_index = 0
+        self.current_player_turn = self.player_ids[0]
         self.round_counter = 0
         self.bonus_trigger_count = 0
         self.last_bonus_trigger_round = None
+        self.time_bonus_seconds_used = 0
+        self._initialize_bonus_state()
+        self.metadata.pop("tie_break", None)
         
         # Initialize bot if needed
         if self.bot_ai:
             self.bot_ai.initialize(self.board_size)
+
+    def _initialize_bonus_state(self) -> None:
+        effect_pool = build_effect_pool(self.game_mode) if self.bonus_effekt else []
+        self.player_effect_pool = {pid: list(effect_pool) for pid in self.player_ids}
+        self.player_ready_effects = {pid: [] for pid in self.player_ids}
+        self.player_used_effects = {pid: [] for pid in self.player_ids}
+        self.player_bonus_history = {pid: [] for pid in self.player_ids}
+        self.player_bonus_notifications = {pid: [] for pid in self.player_ids}
+        self.player_skip_tokens = {pid: 0 for pid in self.player_ids}
+        self.bonus_event_counter = 0
     
     def shuffle_cards(self) -> None:
         """Shuffle cards using Fisher-Yates algorithm"""
@@ -213,6 +245,7 @@ class GameSession:
 
         # Determine if cards match
         is_pair = card1.id == card2.id
+        acting_player = self.current_player_turn
 
         if is_pair:
             self.match_cards(card1, card2, idx1, idx2)
@@ -238,21 +271,195 @@ class GameSession:
 
         # A round is complete after two cards were processed.
         self.round_counter += 1
-        bonus_triggered = self._evaluate_bonus_trigger()
+        bonus_triggered = self._evaluate_bonus_trigger(acting_player)
 
         return is_pair, [idx1, idx2], bonus_triggered
 
-    def _evaluate_bonus_trigger(self) -> bool:
-        """Trigger bonus every 3 rounds when bonus mode is enabled."""
+    def _evaluate_bonus_trigger(self, player_id: str) -> bool:
+        """Assign a bonus effect after a fixed number of completed rounds."""
         if not self.bonus_effekt:
             return False
 
-        if self.round_counter > 0 and self.round_counter % 3 == 0:
+        if player_id not in self.player_ids:
+            return False
+
+        if self.round_counter > 0 and self.round_counter % self.bonus_trigger_interval == 0:
+            assigned_effect = self.assign_bonus_effect(player_id)
+            if not assigned_effect:
+                return False
+
             self.bonus_trigger_count += 1
             self.last_bonus_trigger_round = self.round_counter
             return True
 
         return False
+
+    def assign_bonus_effect(self, player_id: str) -> Optional[str]:
+        if not self.bonus_effekt:
+            return None
+
+        effect_pool = self.player_effect_pool.get(player_id, [])
+        if not effect_pool:
+            return None
+
+        effect_id = self.bonus_random.choice(effect_pool)
+        effect_pool.remove(effect_id)
+        definition = get_bonus_effect_definition(effect_id)
+
+        should_auto_trigger = definition.auto_trigger or player_id == 'bot'
+
+        if should_auto_trigger:
+            self.use_bonus_effect(
+                player_id,
+                effect_id,
+                assignment_round=self.round_counter,
+                auto_assigned=should_auto_trigger,
+            )
+            return effect_id
+
+        self.player_ready_effects[player_id].append(effect_id)
+        self._create_bonus_notification(
+            player_id,
+            event_type="effect_ready",
+            effect_id=effect_id,
+            assignment_round=self.round_counter,
+        )
+        return effect_id
+
+    def get_player_bonus_state(self, player_id: str) -> Dict[str, Any]:
+        ready_effects = self.player_ready_effects.get(player_id, [])
+        used_effects = self.player_used_effects.get(player_id, [])
+        notifications = self.player_bonus_notifications.get(player_id, [])
+
+        return {
+            "bonus_enabled": self.bonus_effekt,
+            "trigger_interval": self.bonus_trigger_interval,
+            "ready_effects": [serialize_bonus_effect(effect_id) for effect_id in ready_effects],
+            "used_effects": [serialize_bonus_effect(effect_id) for effect_id in used_effects],
+            "remaining_pool_size": len(self.player_effect_pool.get(player_id, [])),
+            "can_trigger": bool(
+                not self.finished
+                and self.current_player_turn == player_id
+                and len(ready_effects) > 0
+            ),
+            "notifications": notifications,
+            "time_bonus_seconds_used": self.time_bonus_seconds_used,
+        }
+
+    def trigger_bonus_effect(self, player_id: str, effect_id: Optional[str] = None) -> Dict[str, Any]:
+        if not self.bonus_effekt:
+            raise ValueError("Bonus effects are disabled for this session")
+
+        if player_id not in self.player_ids:
+            raise ValueError("Player is not part of this session")
+
+        if player_id != self.current_player_turn:
+            raise ValueError("Bonus effect can only be triggered during your turn")
+
+        ready_effects = self.player_ready_effects.get(player_id, [])
+        if not ready_effects:
+            raise ValueError("No ready bonus effect available")
+
+        selected_effect_id = effect_id or ready_effects[0]
+        if selected_effect_id not in ready_effects:
+            raise ValueError("Requested bonus effect is not ready")
+
+        ready_effects.remove(selected_effect_id)
+        return self.use_bonus_effect(player_id, selected_effect_id, assignment_round=self.round_counter)
+
+    def use_bonus_effect(
+        self,
+        player_id: str,
+        effect_id: str,
+        assignment_round: int,
+        auto_assigned: bool = False,
+    ) -> Dict[str, Any]:
+        definition = get_bonus_effect_definition(effect_id)
+
+        if effect_id not in self.player_used_effects[player_id]:
+            self.player_used_effects[player_id].append(effect_id)
+
+        self.player_bonus_history[player_id].append(
+            {
+                "effect_id": effect_id,
+                "category": definition.category,
+                "utility_weight": definition.utility_weight,
+                "used_at_round": self.round_counter,
+                "assigned_at_round": assignment_round,
+                "auto_assigned": auto_assigned,
+            }
+        )
+
+        is_auto_triggered = definition.auto_trigger or player_id == 'bot'
+
+        result = {
+            "effect": definition.to_public_dict(),
+            "player_id": player_id,
+            "applied": True,
+            "auto_triggered": is_auto_triggered,
+        }
+
+        if effect_id == "time_bonus":
+            seconds = definition.metadata.get("seconds", 0)
+            self.time_bonus_seconds_used += seconds
+            self.elapsed_time = self.get_effective_elapsed_time()
+            result["time_reduced_seconds"] = seconds
+            result["elapsed_time"] = self.elapsed_time
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
+        elif effect_id == "skip_turn":
+            skipped_players = [pid for pid in self.player_ids if pid != player_id]
+            for skipped_player_id in skipped_players:
+                self.player_skip_tokens[skipped_player_id] = self.player_skip_tokens.get(skipped_player_id, 0) + 1
+            result["skip_applied_to"] = skipped_players
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_auto_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
+
+            if self.current_player_turn in skipped_players and self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
+                # Consume the token now so next_turn() doesn't double-skip this player later
+                self.player_skip_tokens[self.current_player_turn] -= 1
+                self.next_turn()
+
+        return result
+
+    def _create_bonus_notification(
+        self,
+        player_id: str,
+        event_type: str,
+        effect_id: str,
+        assignment_round: int,
+    ) -> None:
+        definition = get_bonus_effect_definition(effect_id)
+        self.bonus_event_counter += 1
+
+        if event_type == "effect_ready":
+            title = definition.label
+            message = f"{definition.label} wurde dir zugewiesen. Du kannst den Effekt in deinem Zug auslösen."
+        elif event_type == "effect_auto_used":
+            title = definition.label
+            message = definition.description
+        else:
+            title = f"{definition.label} eingesetzt"
+            message = definition.description
+
+        self.player_bonus_notifications[player_id].append(
+            {
+                "id": self.bonus_event_counter,
+                "type": event_type,
+                "round": assignment_round,
+                "effect": definition.to_public_dict(),
+                "title": title,
+                "message": message,
+            }
+        )
 
     def match_cards(self, card1, card2, idx1, idx2):
         # Mark cards as matched
@@ -302,8 +509,20 @@ class GameSession:
         Switch to the next player's turn.
         Updates current_player_turn and resets selected cards.
         """
-        self.current_turn_index = (self.current_turn_index + 1) % len(self.turn_order)
-        self.current_player_turn = self.turn_order[self.current_turn_index]
+        if not self.turn_order:
+            return
+
+        for _ in range(len(self.turn_order)):
+            self.current_turn_index = (self.current_turn_index + 1) % len(self.turn_order)
+            next_player = self.turn_order[self.current_turn_index]
+
+            if self.player_skip_tokens.get(next_player, 0) > 0:
+                self.player_skip_tokens[next_player] -= 1
+                continue
+
+            self.current_player_turn = next_player
+            break
+
         self.selected_cards = []
     
     def record_move(self, player_id: str, card_indices: List[int], is_match: bool) -> None:
@@ -444,11 +663,34 @@ class GameSession:
 
         # Calculate elapsed time
         if self.started_at:
-            self.elapsed_time = int((self.ended_at - self.started_at).total_seconds())
+            self.elapsed_time = self.get_effective_elapsed_time(self.ended_at)
 
         # Determine winner(s)
         max_points = max(self.player_points.values()) if self.player_points else 0
         winners = [pid for pid, pts in self.player_points.items() if pts == max_points]
+
+        if len(winners) > 1 and self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
+            utility_by_player = {
+                pid: sum(entry["utility_weight"] for entry in self.player_bonus_history.get(pid, []))
+                for pid in winners
+            }
+            used_count_by_player = {
+                pid: len(self.player_bonus_history.get(pid, []))
+                for pid in winners
+            }
+            lowest_utility = min(utility_by_player.values())
+            winners = [pid for pid in winners if utility_by_player[pid] == lowest_utility]
+
+            if len(winners) > 1:
+                lowest_count = min(used_count_by_player[pid] for pid in winners)
+                winners = [pid for pid in winners if used_count_by_player[pid] == lowest_count]
+
+            self.metadata["tie_break"] = {
+                "resolved": len(winners) == 1,
+                "utility_by_player": utility_by_player,
+                "used_count_by_player": used_count_by_player,
+                "winner": winners[0] if len(winners) == 1 else None,
+            }
 
         # Single winner if there's a clear leader
         self.winner = winners[0] if len(winners) == 1 else None
@@ -495,6 +737,7 @@ class GameSession:
         self.final_results = []
         self.elapsed_time = 0
         self.time_expired = False
+        self.time_bonus_seconds_used = 0
         self.last_unmatched_cards = []
         
         # Reset game state
@@ -514,11 +757,19 @@ class GameSession:
     def stop_timer(self) -> None:
         """Stop the game timer and calculate elapsed time"""
         if self.started_at is not None:
-            self.elapsed_time = int((datetime.now(tz=timezone.utc) - self.started_at).total_seconds())
+            self.elapsed_time = self.get_effective_elapsed_time()
+
+    def get_effective_elapsed_time(self, reference_time: Optional[datetime] = None) -> int:
+        if self.started_at is None:
+            return max(0, self.elapsed_time)
+
+        effective_now = reference_time or datetime.now(tz=timezone.utc)
+        raw_elapsed = int((effective_now - self.started_at).total_seconds())
+        return max(0, raw_elapsed - self.time_bonus_seconds_used)
     
     def get_formatted_elapsed_time(self) -> str:
         """Get elapsed time formatted as MM:SS using utils.format_time"""
-        return format_time(self.elapsed_time)
+        return format_time(self.get_effective_elapsed_time())
     
     def check_win(self) -> bool:
         """
@@ -561,16 +812,18 @@ class GameSession:
             "round_counter": self.round_counter,
             "bonus_trigger_count": self.bonus_trigger_count,
             "last_bonus_trigger_round": self.last_bonus_trigger_round,
+            "bonus_trigger_interval": self.bonus_trigger_interval,
             "current_player": self.current_player_turn,
             "player_ids": self.player_ids,
             "cards": [card.model_dump() for card in self.cards],
             "matched_pairs_count": len(self.matched_pairs),
             "pairs_found": self.pairs_found,
             "player_points": self.player_points,
-            "elapsed_time": self.elapsed_time,
+            "elapsed_time": self.get_effective_elapsed_time() if self.started_at else self.elapsed_time,
             "finished": self.finished,
             "winner": self.winner,
-            "final_results": [r.model_dump() for r in self.final_results] if self.final_results else []
+            "final_results": [r.model_dump() for r in self.final_results] if self.final_results else [],
+            "tie_break": self.metadata.get("tie_break"),
         }
     
     def get_player_view(self, player_id: str) -> Dict:
@@ -586,6 +839,7 @@ class GameSession:
         """
         session_dict = self.to_dict()
         session_dict["is_your_turn"] = self.current_player_turn == player_id
+        session_dict["player_bonus_state"] = self.get_player_bonus_state(player_id)
         return session_dict
     
     def get_move_history(self) -> List[Dict]:
