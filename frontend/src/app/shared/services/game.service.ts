@@ -32,7 +32,7 @@ export interface BonusEffectInfo {
 
 export interface BonusNotification {
   id: number;
-  type: 'effect_ready' | 'effect_auto_used' | 'effect_used';
+  type: 'effect_ready' | 'effect_auto_used' | 'effect_used' | 'effect_used_on_you';
   round: number;
   title: string;
   message: string;
@@ -45,6 +45,8 @@ export interface PlayerBonusState {
   ready_effects: BonusEffectInfo[];
   used_effects: BonusEffectInfo[];
   remaining_pool_size: number;
+  scouting_charge_count?: number;
+  scouting_reveal_available?: boolean;
   can_trigger: boolean;
   notifications: BonusNotification[];
   time_bonus_seconds_used: number;
@@ -91,6 +93,8 @@ export class GameService {
   private bonusEffekt = false;
   private lastSeenBonusTriggerCount = 0;
   private seenBonusNotificationIds = new Set<number>();
+  private pendingPrivateScoutReveal = false;
+  private pendingPrivateScoutMatchResult: boolean | null = null;
 
   // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -142,6 +146,10 @@ export class GameService {
 
   public get canTriggerBonusEffect(): boolean {
     return !!this.currentBonusState?.can_trigger;
+  }
+
+  public get canRevealPrivateScoutCard(): boolean {
+    return this.pendingPrivateScoutReveal;
   }
 
   public get readyBonusEffectLabel(): string {
@@ -252,6 +260,7 @@ export class GameService {
           this.pairsFound = 0;
           this.pairsFoundPlayer = 0;
           this.pairsFoundBot = 0;
+          this.clearPrivateScoutState();
           this.lastSeenBonusTriggerCount = sessionData.bonus_trigger_count || 0;
           this.seenBonusNotificationIds.clear();
           this.updateBonusState(sessionData.player_bonus_state || null);
@@ -288,6 +297,7 @@ export class GameService {
         this.cardsSubject.next(this.cards);
         this.selectedCards = [];
         this.lastFlipResponse = null;
+        this.clearPrivateScoutState();
         this.gameStarted = true;
         this.gameInitialized = state.status === 'active';
         this.finishDialogShown = false;
@@ -330,6 +340,7 @@ export class GameService {
         this.gameStarted = false;
         this.gameInitialized = false;  // Reset the game initialization flag
         this.isPlayerTurn = true;
+        this.clearPrivateScoutState();
         if (this.gameModeGetter === 'singleplayer_time') {
           this.timerService.resetTimer();
         }
@@ -394,9 +405,80 @@ export class GameService {
     this.sessionId = '';
     this.currentGameMode = 'singleplayer_time';
     this.lastSeenBonusTriggerCount = 0;
+    this.clearPrivateScoutState();
     this.updateBonusState(null);
     this.seenBonusNotificationIds.clear();
     console.log('Local game state reset');
+  }
+
+  private clearPrivateScoutState(): void {
+    this.pendingPrivateScoutReveal = false;
+    this.pendingPrivateScoutMatchResult = null;
+  }
+
+  private flipTemporaryCardsDownLocally(): void {
+    this.cards.forEach((card) => {
+      if (!card.matched) {
+        card.flipped = false;
+      }
+    });
+    this.cardsSubject.next([...this.cards]);
+  }
+
+  private beginPrivateScoutReveal(isMatch: boolean): void {
+    this.pendingPrivateScoutReveal = true;
+    this.pendingPrivateScoutMatchResult = isMatch;
+    this.isProcessingLocalAction = true;
+  }
+
+  private finalizePrivateScoutReveal(): void {
+    const pendingMatchResult = this.pendingPrivateScoutMatchResult;
+
+    this.flipTemporaryCardsDownLocally();
+
+    this.sessionService.finalizeMove().subscribe({
+      next: (response: any) => {
+        if (response.data) {
+          this.cards = response.data.cards;
+          this.cardsSubject.next(this.cards);
+          this.updatePointsFromState(response.data.player_points);
+          this.updateBonusState(response.data.player_bonus_state || null);
+
+          if (response.data.current_player) {
+            this.isPlayerTurn = response.data.current_player === this.localPlayerId;
+          }
+        }
+
+        this.clearPrivateScoutState();
+        this.isProcessingLocalAction = false;
+
+        if (pendingMatchResult) {
+          setTimeout(() => this.checkWin(), this.actionDelay / 2);
+        }
+      },
+      error: (error: any) => {
+        console.error('Error finalizing private scout reveal:', error);
+        this.clearPrivateScoutState();
+        this.isProcessingLocalAction = false;
+      }
+    });
+  }
+
+  private revealPrivateScoutCard(card: GameCard): void {
+    if (!this.pendingPrivateScoutReveal) {
+      return;
+    }
+
+    const cardIndex = this.cards.indexOf(card);
+    if (cardIndex < 0 || card.matched || card.flipped) {
+      return;
+    }
+
+    this.pendingPrivateScoutReveal = false;
+    this.cards[cardIndex].flipped = true;
+    this.cardsSubject.next([...this.cards]);
+
+    setTimeout(() => this.finalizePrivateScoutReveal(), this.cardVisibilityDuration);
   }
 
   private updateBonusState(state: PlayerBonusState | null | undefined): void {
@@ -430,6 +512,11 @@ export class GameService {
    * Uses session service and handles response
    */
   flipCard(card: any): void {
+    if (this.pendingPrivateScoutReveal) {
+      this.revealPrivateScoutCard(card);
+      return;
+    }
+
     // Prevent rapid clicks - exit if action already in progress or 2 cards already selected
     if (this.isProcessingLocalAction || this.selectedCards.length >= 2) {
       console.log('Action already in progress or 2 cards already selected. Ignoring click.');
@@ -546,14 +633,14 @@ export class GameService {
     let card1: GameCard | undefined;
     let card2: GameCard | undefined;
 
-    if (flipResponse.card_ids && flipResponse.card_ids.length === 2) {
-      const [id1, id2] = flipResponse.card_ids;
-      card1 = this.cards.find(c => c.id === id1);
-      card2 = this.cards.find(c => c.id === id2);
-    } else if (flipResponse.card_positions && flipResponse.card_positions.length === 2) {
+    if (flipResponse.card_positions && flipResponse.card_positions.length === 2) {
       const [pos1, pos2] = flipResponse.card_positions;
       card1 = this.cards[pos1];
       card2 = this.cards[pos2];
+    } else if (flipResponse.card_ids && flipResponse.card_ids.length === 2) {
+      const [id1, id2] = flipResponse.card_ids;
+      card1 = this.cards.find(c => c.id === id1);
+      card2 = this.cards.find(c => c.id === id2);
     } else if (this.selectedCards && this.selectedCards.length === 2) {
       // Fallback: only use local selection if backend did not provide identifiers/positions
       console.warn('flipResponse missing card identifiers; falling back to selectedCards');
@@ -575,6 +662,11 @@ export class GameService {
       this.selectedCards = [];
       this.lastFlipResponse = null;
 
+      if (flipResponse.player_bonus_state?.scouting_reveal_available) {
+        this.beginPrivateScoutReveal(true);
+        return;
+      }
+
       setTimeout(() => {
         // Check if game is won after a successful match
         this.checkWin();
@@ -588,6 +680,13 @@ export class GameService {
         }
       }, this.actionDelay / 2);
     } else {
+      if (flipResponse.player_bonus_state?.scouting_reveal_available) {
+        this.selectedCards = [];
+        this.lastFlipResponse = null;
+        this.beginPrivateScoutReveal(false);
+        return;
+      }
+
       // No match - flip cards back after a delay (long enough for player to see)
       setTimeout(() => {
         if (card1 && card2) {

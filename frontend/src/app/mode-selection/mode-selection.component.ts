@@ -82,8 +82,14 @@ export class GameModeSelectionComponent {
           this.activeSessionData = res.session;
 
           // Show Match-Found dialog
-          this.showMatchFoundDialog(res.game_session_id, res.opponent);
+          this.showMatchFoundDialog(res.game_session_id, res.opponent, res.match_id);
           // this.openBoardDialog(res.game_session_id, res.session);
+        } else if (res.status === 'ready') {
+          if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+          }
+
+          this.openBoardDialog(res.game_session_id, res.session);
         } else if (res.status === 'waiting') {
           this.multiplayerState = 'searching';
         } else if (res.status === 'not_in_queue') {
@@ -153,6 +159,9 @@ export class GameModeSelectionComponent {
           this.multiplayerState = 'active';
           this.activeSessionId = res.game_session_id;
           this.activeSessionData = res.session;
+          this.showMatchFoundDialog(res.game_session_id, res.opponent, res.match_id);
+        } else if (res.status === 'ready') {
+          this.openBoardDialog(res.game_session_id, res.session);
         } else if (res.status === 'waiting') {
           this.multiplayerState = 'searching';
           this.startMatchmakingPolling(environment.playerId);
@@ -224,19 +233,124 @@ export class GameModeSelectionComponent {
     this.modalService.open(ScoreboardComponent, { size: 'lg', centered: true });
   }
 
-  showMatchFoundDialog(sessionId: string, opponentIds: string[]) {
+  showMatchFoundDialog(sessionId: string, opponentIds: string[], matchId: string) {
     const modalRef = this.modalService.open(MatchFoundDialogComponent, { centered: true, backdrop: 'static' });
     modalRef.componentInstance.gameSessionId = sessionId;
     modalRef.componentInstance.opponentIds = opponentIds;
+    modalRef.componentInstance.matchId = matchId;
+
+    modalRef.componentInstance.acceptClicked.subscribe(() => {
+      this.acceptMatch(matchId, sessionId, modalRef);
+    });
+
+    modalRef.componentInstance.declineClicked.subscribe(() => {
+      modalRef.close({ action: 'declined', matchId });
+    });
+
+    let dialogHandled = false;
+    const statusWatcher = setInterval(() => {
+      this.http.get(`${environment.apiUrl}/matchmaking/status/${environment.playerId}`).subscribe({
+        next: (res: any) => {
+          if (dialogHandled) {
+            return;
+          }
+
+          const isCurrentMatch = (res.status === 'matched' || res.status === 'ready') && res.match_id === matchId;
+          if (!isCurrentMatch) {
+            dialogHandled = true;
+            modalRef.close({ action: 'match-invalidated', status: res.status });
+            return;
+          }
+
+          if (res.both_accepted) {
+            dialogHandled = true;
+            modalRef.close({
+              action: 'both-accepted',
+              gameSessionId: res.game_session_id,
+              session: res.session
+            });
+            return;
+          }
+
+          // If this player already accepted, keep waiting state visible
+          if (res.player_accepted) {
+            modalRef.componentInstance.waitingForOtherPlayer = true;
+          }
+        },
+        error: (err) => {
+          console.error('Error watching match status:', err);
+        }
+      });
+    }, 1500);
 
     modalRef.result.then((result) => {
-      if (result) {
-        // Join the game session and open the game dialog
-        this.openBoardDialog(result);
+      dialogHandled = true;
+      clearInterval(statusWatcher);
+
+      if (result.action === 'both-accepted') {
+        this.openBoardDialog(result.gameSessionId, result.session);
+      } else if (result.action === 'declined') {
+        // Reject the match
+        this.rejectMatch(result.matchId);
+      } else if (result.action === 'match-invalidated') {
+        this.activeSessionId = null;
+        this.activeSessionData = null;
+
+        if (result.status === 'waiting') {
+          this.multiplayerState = 'searching';
+          this.startMatchmakingPolling(environment.playerId);
+        } else {
+          this.multiplayerState = 'idle';
+        }
       }
     }).catch((error) => {
-      // Dialog was declined
-      console.log('Match declined');
+      dialogHandled = true;
+      clearInterval(statusWatcher);
+
+      // Dialog was closed without action
+      console.log('Match dialog closed:', error);
+    });
+  }
+
+  private acceptMatch(matchId: string, sessionId: string, modalRef: any) {
+    this.http.post(`${environment.apiUrl}/matchmaking/accept-match/${matchId}`, {
+      player_id: environment.playerId
+    }).subscribe({
+      next: (res: any) => {
+        if (res.status === 'ready' && res.both_accepted) {
+          modalRef.close({
+            action: 'both-accepted',
+            gameSessionId: sessionId,
+            session: res.session
+          });
+          return;
+        }
+
+        // waiting_for_other
+        modalRef.componentInstance.waitingForOtherPlayer = true;
+      },
+      error: (err) => {
+        console.error('Error accepting match:', err);
+        modalRef.componentInstance.waitingForOtherPlayer = false;
+      }
+    });
+  }
+
+  private rejectMatch(matchId: string) {
+    this.http.post(`${environment.apiUrl}/matchmaking/reject-match/${matchId}`, {
+      player_id: environment.playerId
+    }).subscribe({
+      next: (res: any) => {
+        console.log('[Matchmaking] Match rejected:', res);
+        // Reset state and go back to idle
+        this.clearActiveMultiplayerState();
+        this.multiplayerState = 'idle';
+      },
+      error: (err) => {
+        console.error('Error rejecting match:', err);
+        this.clearActiveMultiplayerState();
+        this.multiplayerState = 'idle';
+      }
     });
   }
 }

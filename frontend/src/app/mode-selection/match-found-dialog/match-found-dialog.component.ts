@@ -1,5 +1,4 @@
-import { Component, Input } from '@angular/core';
-import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -12,14 +11,22 @@ import { CommonModule } from '@angular/common';
 export class MatchFoundDialogComponent {
   @Input() opponentIds: string[] = [];
   @Input() gameSessionId: string = '';
+  @Input() matchId: string = '';
+  @Output() acceptClicked = new EventEmitter<void>();
+  @Output() declineClicked = new EventEmitter<void>();
 
-  constructor(public activeModal: NgbActiveModal) {}
+  waitingForOtherPlayer = false;
 
   onJoinClick() {
-    this.activeModal.close(this.gameSessionId);
+    if (this.waitingForOtherPlayer) {
+      return;
+    }
+
+    this.waitingForOtherPlayer = true;
+    this.acceptClicked.emit();
   }
 
   onDeclineClick() {
-    this.activeModal.dismiss('declined');
+    this.declineClicked.emit();
   }
 }

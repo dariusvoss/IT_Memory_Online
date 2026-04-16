@@ -2,10 +2,16 @@
   <h4>Match gefunden!</h4>
 </div>
 <div class="modal-body xp-body">
-  <p>Ein Gegner wurde gefunden!</p>
-  <p>Möchtest du das Spiel starten?</p>
+  <p *ngIf="!waitingForOtherPlayer">Ein Gegner wurde gefunden!</p>
+  <p *ngIf="!waitingForOtherPlayer">Möchtest du das Spiel starten?</p>
+  <div *ngIf="waitingForOtherPlayer" class="waiting-container">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p>Warte auf anderen Spieler ...</p>
+  </div>
 </div>
 <div class="modal-footer xp-footer" style="justify-content: center; gap: 10px;">
   <button type="button" class="xp-btn" (click)="onDeclineClick()">Ablehnen</button>
-  <button type="button" class="xp-btn" (click)="onJoinClick()">Spiel starten</button>
+  <button *ngIf="!waitingForOtherPlayer" type="button" class="xp-btn" (click)="onJoinClick()" [disabled]="waitingForOtherPlayer">
+    {{ waitingForOtherPlayer ? 'Warte auf anderen Spieler ...' : 'Spiel starten' }}
+  </button>
 </div>

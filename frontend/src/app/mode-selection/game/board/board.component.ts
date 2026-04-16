@@ -56,7 +56,7 @@ export class BoardComponent implements OnInit, OnDestroy {
 
   onCardClick(card: any) {
     // Ist der Spieler nicht am Zug, wird nichts gemacht
-    if (this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
+    if (this.gameService.canRevealPrivateScoutCard || this.gameService.isPlayerTurn || this.gameService.difficultyGetter === 'None') {
       this.gameService.flipCard(card);
     }
   }

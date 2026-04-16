@@ -186,7 +186,8 @@ class Matchmaker:
             player_ids=player_ids,
             created_at=datetime.now(),
             deck_size=deck_size,
-            bonus_effekt=bonus_effekt
+            bonus_effekt=bonus_effekt,
+            metadata={"accepted_players": []}
         )
 
     def on_matched(self, callback: Callable[[Match], None]) -> None:
@@ -223,9 +224,39 @@ class Matchmaker:
         """
         if match := self.matches.get(match_id):
             match.game_session_id = game_session_id
-            match.status = MatchStatus.ACCEPTED
             return True
         return False
+
+    def accept_match(self, match_id: str, player_id: str) -> Optional[Match]:
+        """
+        Mark one player as accepted for a match.
+
+        Returns:
+            Updated match if successful, None if invalid
+        """
+        match = self.matches.get(match_id)
+        if not match:
+            return None
+
+        if player_id not in match.player_ids:
+            return None
+
+        accepted_players = match.metadata.setdefault("accepted_players", [])
+        if player_id not in accepted_players:
+            accepted_players.append(player_id)
+
+        if len(accepted_players) == len(match.player_ids):
+            match.status = MatchStatus.ACCEPTED
+
+        return match
+
+    def is_match_fully_accepted(self, match: Match) -> bool:
+        accepted_players = match.metadata.get("accepted_players", [])
+        return len(accepted_players) == len(match.player_ids)
+
+    def is_player_accepted(self, match: Match, player_id: str) -> bool:
+        accepted_players = match.metadata.get("accepted_players", [])
+        return player_id in accepted_players
 
     def complete_match(self, match_id: str) -> bool:
         """
@@ -265,6 +296,52 @@ class Matchmaker:
 
         # Mark as rejected
         match.status = MatchStatus.REJECTED
+
+        return True
+
+    def reject_match(self, match_id: str, rejecting_player_id: str) -> bool:
+        """
+        Reject a match when a player declines.
+        The player who rejects is removed from queue.
+        The other player is put back in the queue to find a new match.
+
+        Args:
+            match_id: ID of the match to reject
+            rejecting_player_id: The player who is rejecting the match
+
+        Returns:
+            True if successful, False if match not found
+        """
+        match = self.matches.get(match_id)
+        if not match:
+            return False
+
+        # Ensure rejecting player is part of this match
+        if rejecting_player_id not in match.player_ids:
+            return False
+
+        # Find the other player
+        other_player_id = None
+        for player_id in match.player_ids:
+            if player_id != rejecting_player_id:
+                other_player_id = player_id
+                break
+
+        if not other_player_id:
+            return False
+
+        # Remove both players from match tracking
+        for player_id in match.player_ids:
+            if player_id in self.player_to_match:
+                del self.player_to_match[player_id]
+
+        # Mark match as rejected and delete it
+        match.status = MatchStatus.REJECTED
+        del self.matches[match_id]
+
+        # Put the other player back in the queue with the same settings
+        if match.deck_size and match.deck_size > 0:
+            self.join_queue(other_player_id, match.deck_size, match.bonus_effekt)
 
         return True
 
@@ -326,7 +403,7 @@ class Matchmaker:
 
     def get_active_matches(self):
         """Gibt alle laufenden Matches zurück"""
-        return [m for m in self.matches.values() if m.status == MatchStatus.MATCHED.value]
+        return [m for m in self.matches.values() if m.status == MatchStatus.MATCHED]
 
 
 # Global instance

@@ -112,6 +112,8 @@ class GameSession:
         self.player_bonus_history: Dict[str, List[Dict[str, Any]]] = {}
         self.player_bonus_notifications: Dict[str, List[Dict[str, Any]]] = {}
         self.player_skip_tokens: Dict[str, int] = {}
+        self.player_scouting_charges: Dict[str, int] = {}
+        self.player_private_scout_pending: Dict[str, bool] = {}
         self.bonus_event_counter = 0
     
     # ==================== Card Initialization ====================
@@ -176,6 +178,8 @@ class GameSession:
         self.player_bonus_history = {pid: [] for pid in self.player_ids}
         self.player_bonus_notifications = {pid: [] for pid in self.player_ids}
         self.player_skip_tokens = {pid: 0 for pid in self.player_ids}
+        self.player_scouting_charges = {pid: 0 for pid in self.player_ids}
+        self.player_private_scout_pending = {pid: False for pid in self.player_ids}
         self.bonus_event_counter = 0
     
     def shuffle_cards(self) -> None:
@@ -227,6 +231,14 @@ class GameSession:
         
         return True
     
+    def _activate_private_scout_window(self, player_id: str) -> bool:
+        if self.player_scouting_charges.get(player_id, 0) <= 0:
+            return False
+
+        self.player_scouting_charges[player_id] -= 1
+        self.player_private_scout_pending[player_id] = True
+        return True
+
     def check_match(self) -> Tuple[bool, List[int], bool]:
         """
         Check if the two selected cards match.
@@ -271,6 +283,7 @@ class GameSession:
 
         # A round is complete after two cards were processed.
         self.round_counter += 1
+        self._activate_private_scout_window(acting_player)
         bonus_triggered = self._evaluate_bonus_trigger(acting_player)
 
         return is_pair, [idx1, idx2], bonus_triggered
@@ -337,6 +350,8 @@ class GameSession:
             "ready_effects": [serialize_bonus_effect(effect_id) for effect_id in ready_effects],
             "used_effects": [serialize_bonus_effect(effect_id) for effect_id in used_effects],
             "remaining_pool_size": len(self.player_effect_pool.get(player_id, [])),
+            "scouting_charge_count": self.player_scouting_charges.get(player_id, 0),
+            "scouting_reveal_available": self.player_private_scout_pending.get(player_id, False),
             "can_trigger": bool(
                 not self.finished
                 and self.current_player_turn == player_id
@@ -416,17 +431,35 @@ class GameSession:
             for skipped_player_id in skipped_players:
                 self.player_skip_tokens[skipped_player_id] = self.player_skip_tokens.get(skipped_player_id, 0) + 1
             result["skip_applied_to"] = skipped_players
+            
+            # Notification for the player who triggered the effect
             self._create_bonus_notification(
                 player_id,
                 event_type="effect_auto_used",
                 effect_id=effect_id,
                 assignment_round=assignment_round,
             )
+            
+            # Notifications for affected players (those being skipped)
+            for skipped_player_id in skipped_players:
+                self._create_skip_turn_affected_notification(
+                    skipped_player_id,
+                    assignment_round=assignment_round,
+                )
 
             if self.current_player_turn in skipped_players and self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
                 # Consume the token now so next_turn() doesn't double-skip this player later
                 self.player_skip_tokens[self.current_player_turn] -= 1
                 self.next_turn()
+        elif effect_id == "scouting_bonus":
+            self.player_scouting_charges[player_id] = self.player_scouting_charges.get(player_id, 0) + 1
+            result["scouting_charge_count"] = self.player_scouting_charges[player_id]
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
 
         return result
 
@@ -461,6 +494,26 @@ class GameSession:
             }
         )
 
+    def _create_skip_turn_affected_notification(
+        self,
+        player_id: str,
+        assignment_round: int,
+    ) -> None:
+        """Create a notification for a player affected by skip_turn effect."""
+        self.bonus_event_counter += 1
+        definition = get_bonus_effect_definition("skip_turn")
+
+        self.player_bonus_notifications[player_id].append(
+            {
+                "id": self.bonus_event_counter,
+                "type": "effect_used_on_you",
+                "round": assignment_round,
+                "effect": definition.to_public_dict(),
+                "title": "Du musst aussetzen!",
+                "message": "Dein Gegner hat den Aussetzen-Effekt eingesetzt. Du überspringst die nächste Runde.",
+            }
+        )
+
     def match_cards(self, card1, card2, idx1, idx2):
         # Mark cards as matched
         card1.matched = True
@@ -492,7 +545,7 @@ class GameSession:
             self.bot_ai.forget_card(idx2)
     
     
-    def finalize_move(self) -> None:
+    def finalize_move(self, player_id: Optional[str] = None) -> None:
         """
         Finalize the last move: flip back unmatched cards.
         Called by Frontend after cardVisibilityDuration.
@@ -503,6 +556,11 @@ class GameSession:
                 self.cards[idx].flipped = False
         
         self.last_unmatched_cards = []
+
+        if player_id and player_id in self.player_private_scout_pending:
+            self.player_private_scout_pending[player_id] = False
+        elif player_id is None:
+            self.player_private_scout_pending = {pid: False for pid in self.player_ids}
     
     def next_turn(self) -> None:
         """

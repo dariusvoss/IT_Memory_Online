@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Body, Path, Query
+from fastapi import FastAPI, HTTPException, Request, Body, Path, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict
 import json
@@ -56,6 +56,11 @@ matchmaker.on_matched(on_players_matched)
 def read_root():
     """Health check endpoint"""
     return {"message": "Memory Game API is running"}
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Return empty response for browser favicon requests to avoid 404 noise."""
+    return Response(status_code=204)
 
 @app.post(f"{API_PREFIX}/session/create")
 def create_game(request: CreateGameRequest):
@@ -150,8 +155,8 @@ def finalize_move(session_id: str = Path(...), data: Optional[dict] = Body(defau
         raise HTTPException(status_code=404, detail="Session not found")
 
     try:
-        session.finalize_move()
         player_id = data.get("player_id") if data else None
+        session.finalize_move(player_id)
         return {
             "status": "success",
             "message": "Move finalized",
@@ -572,7 +577,7 @@ def cleanup_sessions():
 def get_active_matches():
     """Gibt alle laufenden Matches zurück"""
     active_matches = matchmaker.get_active_matches()
-    return {"active_matches": [match.to_dict() for match in active_matches]}
+    return {"active_matches": [match.model_dump(mode="json") for match in active_matches]}
 
 # ========================= Helper Functions =========================
 
@@ -649,12 +654,19 @@ def get_matchmaking_status(player_id: str):
             # Cleanup stale match references if session no longer exists
             matchmaker.delete_match(match.match_id)
             return {"status": "not_in_queue"}
+
+        player_accepted = matchmaker.is_player_accepted(match, player_id)
+        both_accepted = matchmaker.is_match_fully_accepted(match)
+
         return {
-            "status": "matched",
+            "status": "ready" if both_accepted else "matched",
             "match_id": match.match_id,
             "opponent": [p for p in match.player_ids if p != player_id],
             "game_session_id": match.game_session_id,
             "bonus_effekt": match.bonus_effekt,
+            "player_accepted": player_accepted,
+            "both_accepted": both_accepted,
+            "accepted_players": match.metadata.get("accepted_players", []),
             "session": serialize_session_state(session, player_id) if session else None
         }
     elif matchmaker.is_player_in_queue(player_id):
@@ -689,6 +701,77 @@ def delete_match(match_id: str):
             return {"status": "success", "message": "Match deleted"}
         else:
             raise HTTPException(status_code=404, detail="Match not found")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post(f"{API_PREFIX}/matchmaking/reject-match/{{match_id}}")
+def reject_match(match_id: str, data: dict = Body(...)):
+    """
+    Reject a match when a player declines.
+    The rejecting player is removed from queue.
+    The other player is put back in the queue to find a new match.
+    """
+    try:
+        rejecting_player_id = data.get("player_id")
+        if not rejecting_player_id:
+            raise HTTPException(status_code=400, detail="player_id is required")
+
+        match = matchmaker.get_match(match_id)
+        if not match:
+            raise HTTPException(status_code=404, detail="Match not found")
+
+        session_id = match.game_session_id
+
+        if success := matchmaker.reject_match(match_id, rejecting_player_id):
+            if session_id:
+                session_manager.delete_session(session_id)
+                multiplayer_finish_ack.pop(session_id, None)
+
+            return {
+                "status": "success",
+                "message": "Match rejected, session deleted and other player returned to queue"
+            }
+        else:
+            raise HTTPException(status_code=400, detail="Could not reject match")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+@app.post(f"{API_PREFIX}/matchmaking/accept-match/{{match_id}}")
+def accept_match(match_id: str, data: dict = Body(...)):
+    """Accept a match. Game can start only when both players accepted."""
+    try:
+        player_id = data.get("player_id")
+        if not player_id:
+            raise HTTPException(status_code=400, detail="player_id is required")
+
+        match = matchmaker.accept_match(match_id, player_id)
+        if not match:
+            raise HTTPException(status_code=404, detail="Match not found or invalid player")
+
+        if not match.game_session_id:
+            raise HTTPException(status_code=400, detail="Match has no game session")
+
+        session = session_manager.get_session(match.game_session_id)
+        if not session:
+            matchmaker.delete_match(match_id)
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        both_accepted = matchmaker.is_match_fully_accepted(match)
+
+        return {
+            "status": "ready" if both_accepted else "waiting_for_other",
+            "match_id": match.match_id,
+            "game_session_id": match.game_session_id,
+            "both_accepted": both_accepted,
+            "accepted_players": match.metadata.get("accepted_players", []),
+            "session": serialize_session_state(session, player_id)
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
