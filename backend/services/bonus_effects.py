@@ -33,19 +33,24 @@ class BonusEffectDefinition:
 
 
 BASE_EFFECTS = [
-    {
-        "effect_id": "time_bonus",
-        "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
-        "replacement_by_mode": {
-            GameMode.SINGLEPLAYER_AI: "skip_turn",
-            GameMode.MULTIPLAYER: "skip_turn",
-        },
-    },
+    # {
+    #     "effect_id": "time_bonus",
+    #     "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
+    #     "replacement_by_mode": {
+    #         GameMode.SINGLEPLAYER_AI: "skip_turn",
+    #         GameMode.MULTIPLAYER: "skip_turn",
+    #     },
+    # },
     {
         "effect_id": "scouting_bonus",
         "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
         "replacement_by_mode": {},
-    }
+    }#,
+    # {
+    #     "effect_id": "card_medium",
+    #     "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+    #     "replacement_by_mode": {},
+    # }
 ]
 
 
@@ -73,6 +78,14 @@ BONUS_EFFECT_DEFINITIONS: Dict[str, BonusEffectDefinition] = {
         description="Nach deinen nächsten zwei Karten darfst du zusätzlich eine dritte Karte nur für dich aufdecken.",
         category="information",
         utility_weight=3,
+        auto_trigger=False,
+    ),
+    "card_medium": BonusEffectDefinition(
+        effect_id="card_medium",
+        label="Kartenmedium",
+        description="Du siehst privat eine passende Partnerkarte und hast zwei Versuche, das Paar sofort zu treffen.",
+        category="information",
+        utility_weight=4,
         auto_trigger=False,
     ),
 }

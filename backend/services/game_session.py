@@ -114,6 +114,9 @@ class GameSession:
         self.player_skip_tokens: Dict[str, int] = {}
         self.player_scouting_charges: Dict[str, int] = {}
         self.player_private_scout_pending: Dict[str, bool] = {}
+        self.player_seen_card_positions: Dict[str, Dict[int, set[int]]] = {}
+        self.player_card_medium_preview: Dict[str, Optional[int]] = {}
+        self.player_card_medium_attempts: Dict[str, int] = {}
         self.bonus_event_counter = 0
     
     # ==================== Card Initialization ====================
@@ -180,6 +183,9 @@ class GameSession:
         self.player_skip_tokens = {pid: 0 for pid in self.player_ids}
         self.player_scouting_charges = {pid: 0 for pid in self.player_ids}
         self.player_private_scout_pending = {pid: False for pid in self.player_ids}
+        self.player_seen_card_positions = {pid: {} for pid in self.player_ids}
+        self.player_card_medium_preview = {pid: None for pid in self.player_ids}
+        self.player_card_medium_attempts = {pid: 0 for pid in self.player_ids}
         self.bonus_event_counter = 0
     
     def shuffle_cards(self) -> None:
@@ -215,7 +221,27 @@ class GameSession:
         # Can't flip already flipped or matched cards
         if card.flipped or card.matched:
             return False
-        
+
+        preview_card_index = self.player_card_medium_preview.get(player_id)
+        if (
+            len(self.selected_cards) == 0
+            and preview_card_index is not None
+            and preview_card_index != card_index
+            and 0 <= preview_card_index < len(self.cards)
+        ):
+            preview_card = self.cards[preview_card_index]
+            if not preview_card.matched and card.id == preview_card.id:
+                preview_card.flipped = True
+                card.flipped = True
+                self.selected_cards = [(preview_card_index, preview_card), (card_index, card)]
+                self._remember_seen_card(player_id, preview_card_index, preview_card.id)
+                self._remember_seen_card(player_id, card_index, card.id)
+
+                if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI and self.difficulty == 'Schwer':
+                    self.bot_ai.remember_card(card_index, card.id, seen_by='player')
+
+                return True
+
         # Can't select more than 2 cards per turn
         if len(self.selected_cards) >= 2:
             return False
@@ -224,12 +250,62 @@ class GameSession:
         card.flipped = True
         # Store card with its index for later reference in check_match
         self.selected_cards.append((card_index, card))
+        self._remember_seen_card(player_id, card_index, card.id)
         
         # Remember card for bot (only for 'Schwer' difficulty when player flips cards)
         if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI and self.difficulty == 'Schwer':
             self.bot_ai.remember_card(card_index, card.id, seen_by='player')
         
         return True
+
+    def _remember_seen_card(self, player_id: str, card_index: int, card_id: int) -> None:
+        seen_by_player = self.player_seen_card_positions.setdefault(player_id, {})
+        seen_positions = seen_by_player.setdefault(card_id, set())
+        seen_positions.add(card_index)
+
+    def _get_card_medium_partner_candidates(self, player_id: str) -> List[int]:
+        seen_by_player = self.player_seen_card_positions.get(player_id, {})
+        partner_candidates: set[int] = set()
+
+        for card_id, seen_positions in seen_by_player.items():
+            unresolved_positions = [
+                idx for idx, card in enumerate(self.cards)
+                if card.id == card_id and not card.matched
+            ]
+
+            if len(unresolved_positions) < 2:
+                continue
+
+            for seen_pos in seen_positions:
+                if seen_pos not in unresolved_positions:
+                    continue
+
+                for partner_idx in unresolved_positions:
+                    if partner_idx == seen_pos:
+                        continue
+
+                    partner_card = self.cards[partner_idx]
+                    if partner_card.matched or partner_card.flipped:
+                        continue
+
+                    partner_candidates.add(partner_idx)
+
+        return list(partner_candidates)
+
+    def _activate_card_medium_preview(self, player_id: str) -> Optional[int]:
+        candidates = self._get_card_medium_partner_candidates(player_id)
+        if not candidates:
+            self.player_card_medium_preview[player_id] = None
+            self.player_card_medium_attempts[player_id] = 0
+            return None
+
+        preview_card_index = self.bonus_random.choice(candidates)
+        self.player_card_medium_preview[player_id] = preview_card_index
+        self.player_card_medium_attempts[player_id] = 2
+
+        preview_card = self.cards[preview_card_index]
+        self._remember_seen_card(player_id, preview_card_index, preview_card.id)
+        return preview_card_index
     
     def _activate_private_scout_window(self, player_id: str) -> bool:
         if self.player_scouting_charges.get(player_id, 0) <= 0:
@@ -254,12 +330,35 @@ class GameSession:
         # Extract card index and card from tuples
         idx1, card1 = self.selected_cards[0]
         idx2, card2 = self.selected_cards[1]
+        self.last_unmatched_cards = []
+
+        acting_player = self.current_player_turn
+        medium_preview_index = self.player_card_medium_preview.get(acting_player)
+        medium_match_index: Optional[int] = None
+
+        if medium_preview_index is not None and 0 <= medium_preview_index < len(self.cards):
+            preview_card = self.cards[medium_preview_index]
+            if not preview_card.matched:
+                if idx1 != medium_preview_index and card1.id == preview_card.id:
+                    medium_match_index = idx1
+                elif idx2 != medium_preview_index and card2.id == preview_card.id:
+                    medium_match_index = idx2
 
         # Determine if cards match
-        is_pair = card1.id == card2.id
-        acting_player = self.current_player_turn
+        is_pair = card1.id == card2.id or medium_match_index is not None
 
-        if is_pair:
+        if medium_match_index is not None and medium_preview_index is not None:
+            medium_card = self.cards[medium_match_index]
+            preview_card = self.cards[medium_preview_index]
+            preview_card.flipped = True
+
+            self.match_cards(preview_card, medium_card, medium_preview_index, medium_match_index)
+
+            non_matching_index = idx2 if medium_match_index == idx1 else idx1
+            non_matching_card = self.cards[non_matching_index]
+            if not non_matching_card.matched:
+                non_matching_card.flipped = False
+        elif is_pair:
             self.match_cards(card1, card2, idx1, idx2)
         else:
             # No match - Record unsuccessful move
@@ -278,6 +377,10 @@ class GameSession:
             if self.game_mode in [GameMode.SINGLEPLAYER_AI, GameMode.MULTIPLAYER]:
                 self.next_turn()
 
+        # Kartenmedium preview is only valid for the current two-card attempt.
+        self.player_card_medium_preview[acting_player] = None
+        self.player_card_medium_attempts[acting_player] = 0
+
         # Clear selected cards
         self.selected_cards = []
 
@@ -285,6 +388,9 @@ class GameSession:
         self.round_counter += 1
         self._activate_private_scout_window(acting_player)
         bonus_triggered = self._evaluate_bonus_trigger(acting_player)
+
+        if medium_match_index is not None and medium_preview_index is not None:
+            return True, [medium_preview_index, medium_match_index], bonus_triggered
 
         return is_pair, [idx1, idx2], bonus_triggered
 
@@ -343,6 +449,7 @@ class GameSession:
         ready_effects = self.player_ready_effects.get(player_id, [])
         used_effects = self.player_used_effects.get(player_id, [])
         notifications = self.player_bonus_notifications.get(player_id, [])
+        medium_preview_index = self.player_card_medium_preview.get(player_id)
 
         return {
             "bonus_enabled": self.bonus_effekt,
@@ -352,6 +459,9 @@ class GameSession:
             "remaining_pool_size": len(self.player_effect_pool.get(player_id, [])),
             "scouting_charge_count": self.player_scouting_charges.get(player_id, 0),
             "scouting_reveal_available": self.player_private_scout_pending.get(player_id, False),
+            "medium_preview_active": medium_preview_index is not None,
+            "medium_preview_card_index": medium_preview_index,
+            "medium_attempts_remaining": self.player_card_medium_attempts.get(player_id, 0),
             "can_trigger": bool(
                 not self.finished
                 and self.current_player_turn == player_id
@@ -378,6 +488,9 @@ class GameSession:
         selected_effect_id = effect_id or ready_effects[0]
         if selected_effect_id not in ready_effects:
             raise ValueError("Requested bonus effect is not ready")
+
+        if selected_effect_id == "card_medium" and len(self.selected_cards) > 0:
+            raise ValueError("Kartenmedium kann nur vor der ersten Kartenwahl im Zug aktiviert werden")
 
         ready_effects.remove(selected_effect_id)
         return self.use_bonus_effect(player_id, selected_effect_id, assignment_round=self.round_counter)
@@ -460,6 +573,22 @@ class GameSession:
                 effect_id=effect_id,
                 assignment_round=assignment_round,
             )
+        elif effect_id == "card_medium":
+            preview_card_index = self._activate_card_medium_preview(player_id)
+            result["preview_card_index"] = preview_card_index
+            result["preview_available"] = preview_card_index is not None
+            result["attempts_remaining"] = self.player_card_medium_attempts.get(player_id, 0)
+
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
+
+            if preview_card_index is None and self.player_bonus_notifications[player_id]:
+                self.player_bonus_notifications[player_id][-1]["title"] = "Kartenmedium eingesetzt"
+                self.player_bonus_notifications[player_id][-1]["message"] = "Aktuell gibt es keine passende Partnerkarte aus deinem bisherigen Wissen."
 
         return result
 
@@ -559,8 +688,12 @@ class GameSession:
 
         if player_id and player_id in self.player_private_scout_pending:
             self.player_private_scout_pending[player_id] = False
+            self.player_card_medium_preview[player_id] = None
+            self.player_card_medium_attempts[player_id] = 0
         elif player_id is None:
             self.player_private_scout_pending = {pid: False for pid in self.player_ids}
+            self.player_card_medium_preview = {pid: None for pid in self.player_ids}
+            self.player_card_medium_attempts = {pid: 0 for pid in self.player_ids}
     
     def next_turn(self) -> None:
         """

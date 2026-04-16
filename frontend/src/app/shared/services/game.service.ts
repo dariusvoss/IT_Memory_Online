@@ -47,6 +47,9 @@ export interface PlayerBonusState {
   remaining_pool_size: number;
   scouting_charge_count?: number;
   scouting_reveal_available?: boolean;
+  medium_preview_active?: boolean;
+  medium_preview_card_index?: number | null;
+  medium_attempts_remaining?: number;
   can_trigger: boolean;
   notifications: BonusNotification[];
   time_bonus_seconds_used: number;
@@ -95,6 +98,7 @@ export class GameService {
   private seenBonusNotificationIds = new Set<number>();
   private pendingPrivateScoutReveal = false;
   private pendingPrivateScoutMatchResult: boolean | null = null;
+  private activeMediumPreviewCardIndex: number | null = null;
 
   // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -414,6 +418,7 @@ export class GameService {
   private clearPrivateScoutState(): void {
     this.pendingPrivateScoutReveal = false;
     this.pendingPrivateScoutMatchResult = null;
+    this.activeMediumPreviewCardIndex = null;
   }
 
   private flipTemporaryCardsDownLocally(): void {
@@ -485,6 +490,11 @@ export class GameService {
     const normalizedState = state || null;
     this.bonusStateSubject.next(normalizedState);
 
+    const previewActive = !!normalizedState?.medium_preview_active;
+    const previewIndex = previewActive ? normalizedState?.medium_preview_card_index : null;
+    this.activeMediumPreviewCardIndex = typeof previewIndex === 'number' ? previewIndex : null;
+    this.applyMediumPreviewVisualState();
+
     if (!normalizedState?.notifications?.length) {
       return;
     }
@@ -505,6 +515,20 @@ export class GameService {
    */
   getCards(): any[] {
     return this.cards;
+  }
+
+  private applyMediumPreviewVisualState(): void {
+    if (this.activeMediumPreviewCardIndex === null) {
+      return;
+    }
+
+    const previewCard = this.cards[this.activeMediumPreviewCardIndex];
+    if (!previewCard || previewCard.matched) {
+      return;
+    }
+
+    previewCard.flipped = true;
+    this.cardsSubject.next([...this.cards]);
   }
 
   /**
@@ -574,12 +598,17 @@ export class GameService {
       (response: any) => {
         // Store response for checkMatch
         this.lastFlipResponse = response;
-        this.updateBonusState(response.player_bonus_state || null);
 
         // Update local state from response
         if (response.cards) {
           this.cards = response.cards;
           this.cardsSubject.next(this.cards);
+        }
+
+        this.updateBonusState(response.player_bonus_state || null);
+
+        if (response.selected_cards_count === 0) {
+          this.selectedCards = [];
         }
 
         this.updatePointsFromState(response.player_points);
