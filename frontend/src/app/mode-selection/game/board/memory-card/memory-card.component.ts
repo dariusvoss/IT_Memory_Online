@@ -19,10 +19,11 @@ export class MemoryCardComponent {
   @Input() image!: string;
   @Input() cardId!: number;
   @Input() flipped = false;
+  @Input() selectableWhenFlipped = false;
   @Output() cardClicked = new EventEmitter<void>();
 
   onClick() {
-    if (!this.flipped) {
+    if (!this.flipped || this.selectableWhenFlipped) {
       this.cardClicked.emit();
     }
   }

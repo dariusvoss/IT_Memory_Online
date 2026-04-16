@@ -14,7 +14,11 @@ import { Subscription } from 'rxjs';
       @for (card of cards; track card) {
         <app-card 
           style="display: flex; justify-content: center; align-items: center;"  
-          [image]="card.image" [cardId]="card.id" [flipped]="card.flipped" (cardClicked)="onCardClick(card)">
+          [image]="card.image"
+          [cardId]="card.id"
+          [flipped]="card.flipped"
+          [selectableWhenFlipped]="gameService.canUseKartenmediumPreviewCard(card)"
+          (cardClicked)="onCardClick(card)">
         </app-card>
       }
     </div>
@@ -30,7 +34,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   
   private cardsSubscription: Subscription = new Subscription();
 
-  constructor(private gameService: GameService, private elRef: ElementRef) { }
+  constructor(public gameService: GameService, private elRef: ElementRef) { }
 
   ngOnInit() {
     this.cards = this.gameService.getCards();
@@ -91,4 +95,3 @@ export class BoardComponent implements OnInit, OnDestroy {
     this.gridTemplateRows = `repeat(${rows}, 1fr)`;
   }
 }
-

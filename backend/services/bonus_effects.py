@@ -45,6 +45,11 @@ BASE_EFFECTS = [
         "effect_id": "scouting_bonus",
         "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
         "replacement_by_mode": {},
+    },
+    {
+        "effect_id": "kartenmedium",
+        "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+        "replacement_by_mode": {},
     }
 ]
 
@@ -71,6 +76,14 @@ BONUS_EFFECT_DEFINITIONS: Dict[str, BonusEffectDefinition] = {
         effect_id="scouting_bonus",
         label="Scouting-Bonus",
         description="Nach deinen nächsten zwei Karten darfst du zusätzlich eine dritte Karte nur für dich aufdecken.",
+        category="information",
+        utility_weight=3,
+        auto_trigger=False,
+    ),
+    "kartenmedium": BonusEffectDefinition(
+        effect_id="kartenmedium",
+        label="Kartenmedium",
+        description="Dir wird eine passende Partnerkarte zu einer zuvor von dir aufgedeckten Karte vorab gezeigt.",
         category="information",
         utility_weight=3,
         auto_trigger=False,

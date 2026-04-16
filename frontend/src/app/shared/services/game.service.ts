@@ -47,6 +47,8 @@ export interface PlayerBonusState {
   remaining_pool_size: number;
   scouting_charge_count?: number;
   scouting_reveal_available?: boolean;
+  kartenmedium_preview_available?: boolean;
+  kartenmedium_preview_card_index?: number | null;
   can_trigger: boolean;
   notifications: BonusNotification[];
   time_bonus_seconds_used: number;
@@ -95,6 +97,7 @@ export class GameService {
   private seenBonusNotificationIds = new Set<number>();
   private pendingPrivateScoutReveal = false;
   private pendingPrivateScoutMatchResult: boolean | null = null;
+  private pendingKartenmediumPreviewCardIndex: number | null = null;
 
   // Observable for UI updates
   private cardsSubject = new BehaviorSubject<GameCard[]>([]);
@@ -150,6 +153,15 @@ export class GameService {
 
   public get canRevealPrivateScoutCard(): boolean {
     return this.pendingPrivateScoutReveal;
+  }
+
+  public canUseKartenmediumPreviewCard(card: GameCard): boolean {
+    if (this.pendingKartenmediumPreviewCardIndex === null) {
+      return false;
+    }
+
+    const cardIndex = this.cards.indexOf(card);
+    return cardIndex === this.pendingKartenmediumPreviewCardIndex;
   }
 
   public get readyBonusEffectLabel(): string {
@@ -414,6 +426,40 @@ export class GameService {
   private clearPrivateScoutState(): void {
     this.pendingPrivateScoutReveal = false;
     this.pendingPrivateScoutMatchResult = null;
+    this.clearKartenmediumPreview();
+  }
+
+  private clearKartenmediumPreview(): void {
+    if (this.pendingKartenmediumPreviewCardIndex !== null) {
+      const previewCard = this.cards[this.pendingKartenmediumPreviewCardIndex];
+      if (previewCard && !previewCard.matched) {
+        previewCard.flipped = false;
+      }
+      this.pendingKartenmediumPreviewCardIndex = null;
+      this.cardsSubject.next([...this.cards]);
+    }
+  }
+
+  private applyKartenmediumPreviewFromState(state: PlayerBonusState | null | undefined): void {
+    const previewIndex = state?.kartenmedium_preview_card_index;
+    if (typeof previewIndex !== 'number' || previewIndex < 0 || previewIndex >= this.cards.length) {
+      this.clearKartenmediumPreview();
+      return;
+    }
+
+    if (this.pendingKartenmediumPreviewCardIndex !== null && this.pendingKartenmediumPreviewCardIndex !== previewIndex) {
+      const previousPreview = this.cards[this.pendingKartenmediumPreviewCardIndex];
+      if (previousPreview && !previousPreview.matched) {
+        previousPreview.flipped = false;
+      }
+    }
+
+    this.pendingKartenmediumPreviewCardIndex = previewIndex;
+    const previewCard = this.cards[previewIndex];
+    if (previewCard && !previewCard.matched) {
+      previewCard.flipped = true;
+      this.cardsSubject.next([...this.cards]);
+    }
   }
 
   private flipTemporaryCardsDownLocally(): void {
@@ -483,6 +529,7 @@ export class GameService {
 
   private updateBonusState(state: PlayerBonusState | null | undefined): void {
     const normalizedState = state || null;
+    this.applyKartenmediumPreviewFromState(normalizedState);
     this.bonusStateSubject.next(normalizedState);
 
     if (!normalizedState?.notifications?.length) {
@@ -517,6 +564,17 @@ export class GameService {
       return;
     }
 
+    const cardIndex = this.cards.indexOf(card);
+    const activeKartenmediumIndex = this.pendingKartenmediumPreviewCardIndex;
+
+    if (
+      activeKartenmediumIndex !== null
+      && activeKartenmediumIndex !== cardIndex
+      && this.selectedCards.length === 0
+    ) {
+      this.clearKartenmediumPreview();
+    }
+
     // Prevent rapid clicks - exit if action already in progress or 2 cards already selected
     if (this.isProcessingLocalAction || this.selectedCards.length >= 2) {
       console.log('Action already in progress or 2 cards already selected. Ignoring click.');
@@ -524,7 +582,6 @@ export class GameService {
     }
     
     this.isProcessingLocalAction = true;
-    const cardIndex = this.cards.indexOf(card);
 
     // Optimistic update - flip immediately
     if (this.selectedCards.length < 2 && !card.flipped && !card.matched) {
@@ -574,13 +631,14 @@ export class GameService {
       (response: any) => {
         // Store response for checkMatch
         this.lastFlipResponse = response;
-        this.updateBonusState(response.player_bonus_state || null);
 
         // Update local state from response
         if (response.cards) {
           this.cards = response.cards;
           this.cardsSubject.next(this.cards);
         }
+
+        this.updateBonusState(response.player_bonus_state || null);
 
         this.updatePointsFromState(response.player_points);
 
@@ -1122,6 +1180,17 @@ export class GameService {
         if (typeof reducedSeconds === 'number' && reducedSeconds > 0) {
           this.timerService.applyTimeBonus(reducedSeconds);
         }
+
+        const previewIndex = response?.bonus_result?.kartenmedium_preview_card_index;
+        if (typeof previewIndex === 'number' && updatedState && !updatedState.kartenmedium_preview_available) {
+          this.applyKartenmediumPreviewFromState({
+            ...updatedState,
+            kartenmedium_preview_available: true,
+            kartenmedium_preview_card_index: previewIndex,
+          });
+        } else if (typeof previewIndex === 'number' && !updatedState) {
+          console.warn('Kartenmedium preview index received without updated bonus state.');
+        }
       },
       error: (error: any) => {
         console.error('Error triggering bonus effect:', error);
@@ -1220,4 +1289,3 @@ export class GameService {
     return of({ success: true });
   }
 }
-

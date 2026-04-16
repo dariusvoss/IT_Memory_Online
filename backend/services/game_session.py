@@ -114,6 +114,8 @@ class GameSession:
         self.player_skip_tokens: Dict[str, int] = {}
         self.player_scouting_charges: Dict[str, int] = {}
         self.player_private_scout_pending: Dict[str, bool] = {}
+        self.player_seen_positions: Dict[str, set[int]] = {}
+        self.player_kartenmedium_preview_index: Dict[str, Optional[int]] = {}
         self.bonus_event_counter = 0
     
     # ==================== Card Initialization ====================
@@ -180,6 +182,8 @@ class GameSession:
         self.player_skip_tokens = {pid: 0 for pid in self.player_ids}
         self.player_scouting_charges = {pid: 0 for pid in self.player_ids}
         self.player_private_scout_pending = {pid: False for pid in self.player_ids}
+        self.player_seen_positions = {pid: set() for pid in self.player_ids}
+        self.player_kartenmedium_preview_index = {pid: None for pid in self.player_ids}
         self.bonus_event_counter = 0
     
     def shuffle_cards(self) -> None:
@@ -219,11 +223,18 @@ class GameSession:
         # Can't select more than 2 cards per turn
         if len(self.selected_cards) >= 2:
             return False
+
+        active_preview_index = self.player_kartenmedium_preview_index.get(player_id)
+        if active_preview_index is not None:
+            if card_index == active_preview_index or len(self.selected_cards) == 0:
+                self._clear_kartenmedium_preview(player_id)
         
         # Flip the card
         card.flipped = True
         # Store card with its index for later reference in check_match
         self.selected_cards.append((card_index, card))
+        if player_id in self.player_seen_positions:
+            self.player_seen_positions[player_id].add(card_index)
         
         # Remember card for bot (only for 'Schwer' difficulty when player flips cards)
         if self.bot_ai and self.game_mode == GameMode.SINGLEPLAYER_AI and self.difficulty == 'Schwer':
@@ -238,6 +249,44 @@ class GameSession:
         self.player_scouting_charges[player_id] -= 1
         self.player_private_scout_pending[player_id] = True
         return True
+
+    def _clear_kartenmedium_preview(self, player_id: str) -> None:
+        if player_id in self.player_kartenmedium_preview_index:
+            self.player_kartenmedium_preview_index[player_id] = None
+
+    def _resolve_kartenmedium_preview_card(self, player_id: str) -> Optional[int]:
+        seen_positions = self.player_seen_positions.get(player_id, set())
+        if not seen_positions:
+            return None
+
+        candidate_indexes: List[int] = []
+        preferred_unseen_indexes: List[int] = []
+
+        for seen_index in seen_positions:
+            if seen_index < 0 or seen_index >= len(self.cards):
+                continue
+
+            seen_card = self.cards[seen_index]
+            if seen_card.matched:
+                continue
+
+            partner_indexes = [
+                idx for idx, card in enumerate(self.cards)
+                if idx != seen_index and card.id == seen_card.id and not card.matched and not card.flipped
+            ]
+
+            for partner_index in partner_indexes:
+                if partner_index not in candidate_indexes:
+                    candidate_indexes.append(partner_index)
+                if partner_index not in seen_positions and partner_index not in preferred_unseen_indexes:
+                    preferred_unseen_indexes.append(partner_index)
+
+        if preferred_unseen_indexes:
+            return self.bonus_random.choice(preferred_unseen_indexes)
+        if candidate_indexes:
+            return self.bonus_random.choice(candidate_indexes)
+
+        return None
 
     def check_match(self) -> Tuple[bool, List[int], bool]:
         """
@@ -343,6 +392,7 @@ class GameSession:
         ready_effects = self.player_ready_effects.get(player_id, [])
         used_effects = self.player_used_effects.get(player_id, [])
         notifications = self.player_bonus_notifications.get(player_id, [])
+        kartenmedium_preview_index = self.player_kartenmedium_preview_index.get(player_id)
 
         return {
             "bonus_enabled": self.bonus_effekt,
@@ -352,6 +402,8 @@ class GameSession:
             "remaining_pool_size": len(self.player_effect_pool.get(player_id, [])),
             "scouting_charge_count": self.player_scouting_charges.get(player_id, 0),
             "scouting_reveal_available": self.player_private_scout_pending.get(player_id, False),
+            "kartenmedium_preview_available": kartenmedium_preview_index is not None,
+            "kartenmedium_preview_card_index": kartenmedium_preview_index,
             "can_trigger": bool(
                 not self.finished
                 and self.current_player_turn == player_id
@@ -379,8 +431,13 @@ class GameSession:
         if selected_effect_id not in ready_effects:
             raise ValueError("Requested bonus effect is not ready")
 
-        ready_effects.remove(selected_effect_id)
-        return self.use_bonus_effect(player_id, selected_effect_id, assignment_round=self.round_counter)
+        selected_effect_index = ready_effects.index(selected_effect_id)
+        ready_effects.pop(selected_effect_index)
+        try:
+            return self.use_bonus_effect(player_id, selected_effect_id, assignment_round=self.round_counter)
+        except ValueError:
+            ready_effects.insert(selected_effect_index, selected_effect_id)
+            raise
 
     def use_bonus_effect(
         self,
@@ -390,6 +447,12 @@ class GameSession:
         auto_assigned: bool = False,
     ) -> Dict[str, Any]:
         definition = get_bonus_effect_definition(effect_id)
+        preview_index: Optional[int] = None
+
+        if effect_id == "kartenmedium":
+            preview_index = self._resolve_kartenmedium_preview_card(player_id)
+            if preview_index is None:
+                raise ValueError("Kartenmedium konnte nicht eingesetzt werden, da keine passende Partnerkarte verfügbar ist.")
 
         if effect_id not in self.player_used_effects[player_id]:
             self.player_used_effects[player_id].append(effect_id)
@@ -454,6 +517,15 @@ class GameSession:
         elif effect_id == "scouting_bonus":
             self.player_scouting_charges[player_id] = self.player_scouting_charges.get(player_id, 0) + 1
             result["scouting_charge_count"] = self.player_scouting_charges[player_id]
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
+        elif effect_id == "kartenmedium":
+            self.player_kartenmedium_preview_index[player_id] = preview_index
+            result["kartenmedium_preview_card_index"] = preview_index
             self._create_bonus_notification(
                 player_id,
                 event_type="effect_used",
@@ -570,12 +642,16 @@ class GameSession:
         if not self.turn_order:
             return
 
+        previous_player = self.current_player_turn
+        self._clear_kartenmedium_preview(previous_player)
+
         for _ in range(len(self.turn_order)):
             self.current_turn_index = (self.current_turn_index + 1) % len(self.turn_order)
             next_player = self.turn_order[self.current_turn_index]
 
             if self.player_skip_tokens.get(next_player, 0) > 0:
                 self.player_skip_tokens[next_player] -= 1
+                self._clear_kartenmedium_preview(next_player)
                 continue
 
             self.current_player_turn = next_player
