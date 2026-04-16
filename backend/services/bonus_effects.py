@@ -33,24 +33,24 @@ class BonusEffectDefinition:
 
 
 BASE_EFFECTS = [
-    # {
-    #     "effect_id": "time_bonus",
-    #     "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
-    #     "replacement_by_mode": {
-    #         GameMode.SINGLEPLAYER_AI: "skip_turn",
-    #         GameMode.MULTIPLAYER: "skip_turn",
-    #     },
-    # },
+    {
+        "effect_id": "time_bonus",
+        "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
+        "replacement_by_mode": {
+            GameMode.SINGLEPLAYER_AI: "skip_turn",
+            GameMode.MULTIPLAYER: "skip_turn",
+        },
+    },
     {
         "effect_id": "scouting_bonus",
         "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
         "replacement_by_mode": {},
-    }#,
-    # {
-    #     "effect_id": "card_medium",
-    #     "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
-    #     "replacement_by_mode": {},
-    # }
+    },
+    {
+        "effect_id": "card_medium",
+        "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+        "replacement_by_mode": {},
+    }
 ]
 
 

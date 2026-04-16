@@ -459,6 +459,14 @@ export class GameService {
 
         if (pendingMatchResult) {
           setTimeout(() => this.checkWin(), this.actionDelay / 2);
+        } else if (this.currentGameMode === 'singleplayer_ai') {
+          const nextPlayer = response.data?.current_player;
+          if (nextPlayer && nextPlayer !== this.localPlayerId) {
+            this.isPlayerTurn = false;
+            setTimeout(() => this.botMove(), this.actionDelay);
+          } else {
+            this.isPlayerTurn = true;
+          }
         }
       },
       error: (error: any) => {
