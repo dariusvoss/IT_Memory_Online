@@ -8,6 +8,7 @@ import { NgbModal } from '@ng-bootstrap/ng-bootstrap/modal';
 import { SizeDialogComponent } from './size-dialog/size-dialog.component';
 import { GameDialogComponent } from './game/game-dialog.component';
 import { MatchFoundDialogComponent } from './match-found-dialog/match-found-dialog.component';
+import { BonusModeDialogComponent } from './bonus-mode-dialog/bonus-mode-dialog.component';
 import { SessionService } from '../shared/services/session.service';
 import { GameService } from '../shared/services/game.service';
 
@@ -22,6 +23,7 @@ export class GameModeSelectionComponent {
   selectedMode: 'none' | 'singleplayer' | 'multiplayer' = 'none';
   multiplayerState: 'idle' | 'searching' | 'active' = 'idle';
   bonus_effekt = false;
+  readonly showBonusSlideToggle = !environment.useBonusDialogIfSlideOff;
   private selectedSize: number = -1; // Standard size
   pollingInterval: ReturnType<typeof setInterval> | undefined;
   activeSessionId: string | null = null;
@@ -41,14 +43,22 @@ export class GameModeSelectionComponent {
   chooseSize() {
       const modalRef_size = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
 
-      modalRef_size.result.then((result) => {
+      modalRef_size.result.then(async (result) => {
         if (result) {
+          const selectedBonusMode = await this.chooseBonusMode();
+          if (selectedBonusMode === null) {
+            return;
+          }
+
+          this.bonus_effekt = selectedBonusMode;
+          this.gameService.setBonusEffekt(selectedBonusMode);
+
           this.selectedSize = result;
           this.multiplayerState = 'searching';
           this.http.post(`${environment.apiUrl}/matchmaking/join-queue`, {
             player_id: environment.playerId,
             deck_size: this.selectedSize,
-            bonus_effekt: this.gameService.bonusEffektEnabled
+            bonus_effekt: selectedBonusMode
           })
         .subscribe({
           next: response => console.log('Player joined queue response:', response),
@@ -62,6 +72,24 @@ export class GameModeSelectionComponent {
         console.log('SizeDialog dismissed');
       });
     }
+
+  private async chooseBonusMode(): Promise<boolean | null> {
+    if (!environment.useBonusDialogIfSlideOff) {
+      return this.gameService.bonusEffektEnabled;
+    }
+
+    if (this.gameService.bonusEffektEnabled) {
+      // Debug-bypass: if slide toggle is active, skip dialog
+      return true;
+    }
+
+    const modalRef = this.modalService.open(BonusModeDialogComponent, { size: 'md', centered: true });
+    try {
+      return await modalRef.result;
+    } catch {
+      return null;
+    }
+  }
 
   startMatchmakingPolling(playerId: string) {
     console.log('[Matchmaking] Starting polling for player:', playerId);

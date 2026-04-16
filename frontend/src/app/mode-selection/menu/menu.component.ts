@@ -6,6 +6,8 @@ import { GameService } from '../../shared/services/game.service';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 import { TimerService } from '../../shared/services/timer.service';
 import { DifficultyDialogComponent } from './difficulty-dialog/difficulty-dialog.component';
+import { BonusModeDialogComponent } from '../bonus-mode-dialog/bonus-mode-dialog.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-menu',
@@ -38,14 +40,38 @@ export class MenuComponent {
   chooseSize(mode: string) {
     const modalRef_size = this.modalService.open(SizeDialogComponent, { size: 'md', centered: true });
 
-    modalRef_size.result.then((result) => {
+    modalRef_size.result.then(async (result) => {
       if (result) {
+        const selectedBonusMode = await this.chooseBonusMode();
+        if (selectedBonusMode === null) {
+          return;
+        }
+
+        this.gameService.setBonusEffekt(selectedBonusMode);
         this.selectedSize = result;
         this.openGameDialog(mode);
       }
     }).catch((error) => {
       console.log('SizeDialog dismissed');
     });
+  }
+
+  private async chooseBonusMode(): Promise<boolean | null> {
+    if (!environment.useBonusDialogIfSlideOff) {
+      return this.gameService.bonusEffektEnabled;
+    }
+
+    if (this.gameService.bonusEffektEnabled) {
+      // Debug-bypass: if slide toggle is active, skip dialog
+      return true;
+    }
+
+    const modalRef = this.modalService.open(BonusModeDialogComponent, { size: 'md', centered: true });
+    try {
+      return await modalRef.result;
+    } catch {
+      return null;
+    }
   }
 
   configurePlaythrough(mode: string) {

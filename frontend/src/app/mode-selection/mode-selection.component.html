@@ -3,18 +3,20 @@
   <!-- Shown when: no mode selected OR Multiplayer selected but no deck size chosen yet -->
   @if (selectedMode === 'none' || (selectedMode === 'multiplayer' && multiplayerState === 'idle')) {
     <div class="mode-selection">
-      <div class="bonus-switch-container">
-        <span class="bonus-label">Bonus-Effekt-Modus</span>
-        <button
-          class="bonus-switch"
-          type="button"
-          role="switch"
-          [attr.aria-checked]="bonus_effekt"
-          [attr.aria-label]="'Bonus-Effekt-Modus ' + (bonus_effekt ? 'aktiviert' : 'deaktiviert')"
-          [class.active]="bonus_effekt"
-          (click)="toggleBonusEffekt()"
-        ></button>
-      </div>
+      @if (showBonusSlideToggle) {
+        <div class="bonus-switch-container">
+          <span class="bonus-label">Bonus-Effekt-Modus</span>
+          <button
+            class="bonus-switch"
+            type="button"
+            role="switch"
+            [attr.aria-checked]="bonus_effekt"
+            [attr.aria-label]="'Bonus-Effekt-Modus ' + (bonus_effekt ? 'aktiviert' : 'deaktiviert')"
+            [class.active]="bonus_effekt"
+            (click)="toggleBonusEffekt()"
+          ></button>
+        </div>
+      }
 
       <div class="button-group">
         <button class="xp-btn" (click)="selectSingleplayer()" >
