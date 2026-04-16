@@ -62,6 +62,21 @@ class BotAI:
     def clear_memory(self) -> None:
         """Clear all memory"""
         self.memory.clear()
+
+    def remap_memory_positions(self, index_mapping: Dict[int, int]) -> None:
+        """Remap remembered card positions after board reordering."""
+        if not self.memory:
+            return
+
+        remapped_memory: OrderedDict[int, int] = OrderedDict()
+        for old_index, card_id in self.memory.items():
+            new_index = index_mapping.get(old_index)
+            if new_index is None:
+                continue
+
+            remapped_memory[new_index] = card_id
+
+        self.memory = remapped_memory
     
     def find_known_pair(self) -> Optional[Tuple[int, int]]:
         """Find a known matching pair in memory"""

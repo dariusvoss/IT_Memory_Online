@@ -193,6 +193,82 @@ class GameSession:
         for i in range(len(self.cards) - 1, 0, -1):
             j = random.randint(0, i)
             self.cards[i], self.cards[j] = self.cards[j], self.cards[i]
+
+        for idx, card in enumerate(self.cards):
+            card.position = idx
+
+    def _remap_seen_card_positions(self, index_mapping: Dict[int, int]) -> None:
+        for player_id, seen_by_id in self.player_seen_card_positions.items():
+            remapped_by_id: Dict[int, set[int]] = {}
+
+            for card_id, seen_positions in seen_by_id.items():
+                remapped_positions = {
+                    index_mapping[pos]
+                    for pos in seen_positions
+                    if pos in index_mapping
+                }
+                if remapped_positions:
+                    remapped_by_id[card_id] = remapped_positions
+
+            self.player_seen_card_positions[player_id] = remapped_by_id
+
+    def _apply_whirlwind_shuffle(self, triggered_by_player_id: str) -> Dict[str, Any]:
+        if not self.cards:
+            return {
+                "shuffle_applied": False,
+                "shuffle_mapping": {},
+                "bot_memory_cleared": False,
+            }
+
+        old_cards = list(self.cards)
+        old_index_by_object_id = {id(card): idx for idx, card in enumerate(old_cards)}
+
+        self.shuffle_cards()
+
+        index_mapping: Dict[int, int] = {}
+        for new_idx, card in enumerate(self.cards):
+            old_idx = old_index_by_object_id.get(id(card))
+            if old_idx is None:
+                continue
+            index_mapping[old_idx] = new_idx
+
+        if self.selected_cards:
+            remapped_selected_cards: List[Tuple[int, Card]] = []
+            for old_idx, card in self.selected_cards:
+                if old_idx in index_mapping:
+                    remapped_selected_cards.append((index_mapping[old_idx], card))
+            self.selected_cards = remapped_selected_cards
+
+        self.last_unmatched_cards = [
+            index_mapping[idx]
+            for idx in self.last_unmatched_cards
+            if idx in index_mapping
+        ]
+
+        self._remap_seen_card_positions(index_mapping)
+
+        for pid, preview_idx in list(self.player_card_medium_preview.items()):
+            if preview_idx is None:
+                continue
+            self.player_card_medium_preview[pid] = index_mapping.get(preview_idx)
+
+        bot_memory_cleared = False
+        if self.bot_ai:
+            self.bot_ai.remap_memory_positions(index_mapping)
+
+            if (
+                triggered_by_player_id == 'bot'
+                and self.game_mode == GameMode.SINGLEPLAYER_AI
+                and self.difficulty in ['Mittel', 'Schwer']
+            ):
+                self.bot_ai.clear_memory()
+                bot_memory_cleared = True
+
+        return {
+            "shuffle_applied": True,
+            "shuffle_mapping": index_mapping,
+            "bot_memory_cleared": bot_memory_cleared,
+        }
     
     # ==================== Core Game Methods ====================
     
@@ -489,8 +565,8 @@ class GameSession:
         if selected_effect_id not in ready_effects:
             raise ValueError("Requested bonus effect is not ready")
 
-        if selected_effect_id == "card_medium" and len(self.selected_cards) > 0:
-            raise ValueError("Kartenmedium kann nur vor der ersten Kartenwahl im Zug aktiviert werden")
+        if selected_effect_id in {"card_medium", "whirlwind"} and len(self.selected_cards) > 0:
+            raise ValueError("Dieser Effekt kann nur vor der ersten Kartenwahl im Zug aktiviert werden")
 
         ready_effects.remove(selected_effect_id)
         return self.use_bonus_effect(player_id, selected_effect_id, assignment_round=self.round_counter)
@@ -589,6 +665,29 @@ class GameSession:
             if preview_card_index is None and self.player_bonus_notifications[player_id]:
                 self.player_bonus_notifications[player_id][-1]["title"] = "Kartenmedium eingesetzt"
                 self.player_bonus_notifications[player_id][-1]["message"] = "Aktuell gibt es keine passende Partnerkarte aus deinem bisherigen Wissen."
+        elif effect_id == "whirlwind":
+            whirlwind_result = self._apply_whirlwind_shuffle(player_id)
+            result.update(whirlwind_result)
+
+            self._create_bonus_notification(
+                player_id,
+                event_type="effect_used",
+                effect_id=effect_id,
+                assignment_round=assignment_round,
+            )
+
+            affected_players = [pid for pid in self.player_ids if pid != player_id]
+            for affected_player in affected_players:
+                self._create_whirlwind_affected_notification(
+                    affected_player,
+                    assignment_round=assignment_round,
+                )
+
+            if whirlwind_result.get("bot_memory_cleared") and self.player_bonus_notifications[player_id]:
+                self.player_bonus_notifications[player_id][-1]["message"] = (
+                    "Mischt alle Karten zufällig durch. Bereits aufgedeckte Karten bleiben aufgedeckt. "
+                    "Der Bot verliert dabei zusätzlich sein Gedächtnis."
+                )
 
         return result
 
@@ -640,6 +739,26 @@ class GameSession:
                 "effect": definition.to_public_dict(),
                 "title": "Du musst aussetzen!",
                 "message": "Dein Gegner hat den Aussetzen-Effekt eingesetzt. Du überspringst die nächste Runde.",
+            }
+        )
+
+    def _create_whirlwind_affected_notification(
+        self,
+        player_id: str,
+        assignment_round: int,
+    ) -> None:
+        """Create a notification for players affected by a whirlwind effect."""
+        self.bonus_event_counter += 1
+        definition = get_bonus_effect_definition("whirlwind")
+
+        self.player_bonus_notifications[player_id].append(
+            {
+                "id": self.bonus_event_counter,
+                "type": "effect_used_on_you",
+                "round": assignment_round,
+                "effect": definition.to_public_dict(),
+                "title": "Wirbelwind aktiv!",
+                "message": "Dein Gegner hat Wirbelwind eingesetzt. Das Spielfeld wurde neu gemischt.",
             }
         )
 

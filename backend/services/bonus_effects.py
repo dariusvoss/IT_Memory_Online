@@ -33,22 +33,27 @@ class BonusEffectDefinition:
 
 
 BASE_EFFECTS = [
+    # {
+    #     "effect_id": "time_bonus",
+    #     "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
+    #     "replacement_by_mode": {
+    #         GameMode.SINGLEPLAYER_AI: "skip_turn",
+    #         GameMode.MULTIPLAYER: "skip_turn",
+    #     },
+    # },
+    # {
+    #     "effect_id": "scouting_bonus",
+    #     "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+    #     "replacement_by_mode": {},
+    # },
+    # {
+    #     "effect_id": "card_medium",
+    #     "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+    #     "replacement_by_mode": {},
+    # },
     {
-        "effect_id": "time_bonus",
-        "allowed_modes": [GameMode.SINGLEPLAYER_TIME],
-        "replacement_by_mode": {
-            GameMode.SINGLEPLAYER_AI: "skip_turn",
-            GameMode.MULTIPLAYER: "skip_turn",
-        },
-    },
-    {
-        "effect_id": "scouting_bonus",
-        "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
-        "replacement_by_mode": {},
-    },
-    {
-        "effect_id": "card_medium",
-        "allowed_modes": [GameMode.MULTIPLAYER,GameMode.SINGLEPLAYER_AI,GameMode.SINGLEPLAYER_TIME],
+        "effect_id": "whirlwind",
+        "allowed_modes": [GameMode.MULTIPLAYER, GameMode.SINGLEPLAYER_AI, GameMode.SINGLEPLAYER_TIME],
         "replacement_by_mode": {},
     }
 ]
@@ -85,6 +90,14 @@ BONUS_EFFECT_DEFINITIONS: Dict[str, BonusEffectDefinition] = {
         label="Kartenmedium",
         description="Du siehst privat eine passende Partnerkarte und hast zwei Versuche, das Paar sofort zu treffen.",
         category="information",
+        utility_weight=4,
+        auto_trigger=False,
+    ),
+    "whirlwind": BonusEffectDefinition(
+        effect_id="whirlwind",
+        label="Wirbelwind",
+        description="Mischt alle Karten zufällig durch. Bereits aufgedeckte Karten bleiben aufgedeckt.",
+        category="board_control",
         utility_weight=4,
         auto_trigger=False,
     ),

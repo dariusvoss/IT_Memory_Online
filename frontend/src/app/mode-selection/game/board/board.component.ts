@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
   selector: 'app-board',
   imports: [MemoryCardComponent, CommonModule],
   template: `
-    <div class="board" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
+    <div class="board" [class.whirlwind-active]="isWhirlwindAnimating" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
       @for (card of cards; track card) {
         <app-card 
           style="display: flex; justify-content: center; align-items: center;"  
@@ -28,10 +28,13 @@ export class BoardComponent implements OnInit, OnDestroy {
   cards: any[] = [];
   gridTemplateColumns: string = '';
   gridTemplateRows: string = '';
+  isWhirlwindAnimating: boolean = false;
   timerService: TimerService = inject(TimerService);
   gameDialog: GameDialogComponent = inject(GameDialogComponent);
   
   private cardsSubscription: Subscription = new Subscription();
+  private whirlwindSubscription: Subscription = new Subscription();
+  private whirlwindAnimationTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(public gameService: GameService, private elRef: ElementRef) { }
 
@@ -44,11 +47,33 @@ export class BoardComponent implements OnInit, OnDestroy {
       this.cards = updatedCards;
       this.setGridTemplate();
     });
+
+    this.whirlwindSubscription = this.gameService.whirlwindAnimation$.subscribe((durationMs: number) => {
+      this.isWhirlwindAnimating = true;
+
+      if (this.whirlwindAnimationTimer) {
+        clearTimeout(this.whirlwindAnimationTimer);
+      }
+
+      this.whirlwindAnimationTimer = setTimeout(() => {
+        this.isWhirlwindAnimating = false;
+        this.whirlwindAnimationTimer = null;
+      }, durationMs);
+    });
   }
 
   ngOnDestroy() {
     if (this.cardsSubscription) {
       this.cardsSubscription.unsubscribe();
+    }
+
+    if (this.whirlwindSubscription) {
+      this.whirlwindSubscription.unsubscribe();
+    }
+
+    if (this.whirlwindAnimationTimer) {
+      clearTimeout(this.whirlwindAnimationTimer);
+      this.whirlwindAnimationTimer = null;
     }
   }
 

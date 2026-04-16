@@ -5,7 +5,7 @@ import { SessionService } from './session.service';
 import { FinishDialogComponent } from '../../mode-selection/game/board/finish-dialog/finish-dialog.component';
 import { BonusEffectDialogComponent } from '../../mode-selection/game/board/bonus-effect-dialog/bonus-effect-dialog.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, Subject } from 'rxjs';
 import { tap, map, mergeMap, catchError, finalize } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { GameRecord } from './game-record.model';
@@ -109,6 +109,9 @@ export class GameService {
 
   private bonusStateSubject = new BehaviorSubject<PlayerBonusState | null>(null);
   public bonusState$ = this.bonusStateSubject.asObservable();
+
+  private whirlwindAnimationSubject = new Subject<number>();
+  public whirlwindAnimation$ = this.whirlwindAnimationSubject.asObservable();
 
   constructor(private timerService: TimerService, private modalService: NgbModal) {
     console.log('GameService initialized');
@@ -513,8 +516,22 @@ export class GameService {
 
     unseenNotifications.forEach((notification) => {
       this.seenBonusNotificationIds.add(notification.id);
+
+      if (
+        notification.effect?.id === 'whirlwind' &&
+        (notification.type === 'effect_used' ||
+          notification.type === 'effect_auto_used' ||
+          notification.type === 'effect_used_on_you')
+      ) {
+        this.triggerWhirlwindAnimation();
+      }
+
       this.openBonusEffectDialog(notification);
     });
+  }
+
+  private triggerWhirlwindAnimation(durationMs: number = 900): void {
+    this.whirlwindAnimationSubject.next(durationMs);
   }
 
   /**
@@ -1152,6 +1169,12 @@ export class GameService {
 
     this.sessionService.triggerBonusEffect(readyEffect.id).subscribe({
       next: (response: any) => {
+        const updatedCards = response?.data?.cards;
+        if (updatedCards) {
+          this.cards = updatedCards;
+          this.cardsSubject.next([...this.cards]);
+        }
+
         const updatedState = response?.data?.player_bonus_state || null;
         this.updateBonusState(updatedState);
 

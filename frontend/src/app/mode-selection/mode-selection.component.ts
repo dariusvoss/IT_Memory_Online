@@ -74,15 +74,6 @@ export class GameModeSelectionComponent {
     }
 
   private async chooseBonusMode(): Promise<boolean | null> {
-    if (!environment.useBonusDialogIfSlideOff) {
-      return this.gameService.bonusEffektEnabled;
-    }
-
-    if (this.gameService.bonusEffektEnabled) {
-      // Debug-bypass: if slide toggle is active, skip dialog
-      return true;
-    }
-
     const modalRef = this.modalService.open(BonusModeDialogComponent, { size: 'md', centered: true });
     try {
       return await modalRef.result;
