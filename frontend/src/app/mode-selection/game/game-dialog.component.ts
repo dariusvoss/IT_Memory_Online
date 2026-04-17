@@ -37,7 +37,6 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   private timer: TimerService = inject(TimerService);
   private currentTime: number = 0;
   private gameEndedSubscription: Subscription = new Subscription;
-  currentImage: string ='../assets/icons/Stop.png';
   readonly bonusPlaceholderPath = 'assets/icons/effect-placeholder.svg';
 
   private readonly bonusEffectCatalog: BonusEffectCatalogEntry[] = [
@@ -128,6 +127,10 @@ export class GameDialogComponent implements OnInit, OnDestroy {
     return this.gameService.readyBonusEffectLabel;
   }
 
+  get currentImage(): string {
+    return this.timer.isTimerRunning ? '../assets/icons/Stop.png' : '../assets/icons/Play.png';
+  }
+
   get showBonusSidebar(): boolean {
     return this.gameService.showManualBonusButton;
   }
@@ -199,10 +202,8 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   stopResumeTimerBtn() {
     if (this.timer.isTimerRunning) {
       this.timer.stopTimer();
-      this.currentImage = '../assets/icons/Play.png';
     } else {
       this.timer.startTimer();
-      this.currentImage = '../assets/icons/Stop.png';
     }
   }
 
