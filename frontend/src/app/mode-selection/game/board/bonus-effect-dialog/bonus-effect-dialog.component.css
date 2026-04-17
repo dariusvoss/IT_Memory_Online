@@ -2,18 +2,26 @@
   text-align: center;
   margin: 0;
   font-size: 1.05rem;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
 }
 
 .effect-name {
   text-align: center;
-  font-weight: 700;
+  font-weight: 600;
   margin-bottom: 0.75rem;
+  color: #C41E3A;
+  font-family: 'Open Sans', sans-serif;
 }
 
 .description,
 .hint {
   text-align: center;
   margin: 0.75rem 0 0;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
 }
 
 .hint {

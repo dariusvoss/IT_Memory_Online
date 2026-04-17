@@ -1,26 +1,32 @@
 .difficulty-selection {
     text-align: center;
     margin: 20px 0;
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
 }
 
 .card.difficulty-card {
     cursor: pointer;
     height: 156px;
+    background-color: #ffffff !important;
+    border: 2px solid #C41E3A !important;
 }
 
-/* .card.difficulty-card:hover {
+.card.difficulty-card:hover {
     transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-} */
-
-/* .difficulty-easy {
-    background-color: rgb(24, 185, 24);
+    box-shadow: 0 4px 8px rgba(196, 30, 58, 0.3) !important;
 }
 
-.difficulty-medium {
-    background-color: rgb(253, 190, 72);
+.card.difficulty-card .card-body {
+    background-color: #ffffff !important;
 }
 
-.difficulty-hard {
-    background-color: red;
-} */
+.card.difficulty-card .card-title {
+    background-color: #C41E3A !important;
+    color: #ffffff !important;
+}
+
+.card.difficulty-card .card-text {
+    color: #333333 !important;
+}

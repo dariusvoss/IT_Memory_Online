@@ -1,11 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+
 body {
-    font-family: Tahoma, sans-serif;
-    background-color: #e4e4e4;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
+    background-color: #f5f5f5;
+    color: #333333;
 }
 
 /* Spezielle Schriftart für Header */
 h1, h2, h3, h4, h5, h6 {
-    font-family: Trebuchet MS, sans-serif;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+    color: #333333;
 }
 
 .right {
@@ -15,109 +21,180 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Programm-Dialog-Stil für Windows XP */
 .xp-program-dialog {
-    background-color: #e4e4e4;
+    background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     text-align: center;
+    border: 2px solid #2c2c2c;
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
+}
+
+.xp-program-dialog h4,
+.xp-program-dialog h5,
+.xp-program-dialog h6,
+.xp-program-dialog p {
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
 }
 
 /* Header-Stil für Windows XP */
 .xp-header {
-    background-color: #d4d0c8;
-    border-bottom: 1px solid #808080;
+    background-color: #444152;
+    border-bottom: 2px solid #353233;
     padding: 10px;
     text-align: center;
+    color: #ffffff;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
+}
+
+.xp-header h4,
+.xp-header h5,
+.xp-header h6,
+.xp-header p {
+    color: #ffffff;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
 }
 
 /* Programm-Header-Stil für Windows XP */
 .xp-program-header {
-    background-color: #0f87f6;
-    border-bottom: 1px solid #045bac;
+    background-color: #444152;
+    border-bottom: 2px solid #353233;
     padding: 10px;
     text-align: center;
     color: white;
-    font-weight: bold;
+    font-weight: 600;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-family: 'Open Sans', sans-serif;
+}
+
+.xp-program-header h4,
+.xp-program-header h5,
+.xp-program-header h6,
+.xp-program-header p {
+    color: #ffffff;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 600;
 }
 
 /* Body-Stil für Windows XP */
 .xp-body {
-    background-color: #e4e4e4;
+    background-color: #ffffff;
     padding: 20px;
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
+}
+
+.xp-body h4,
+.xp-body h5,
+.xp-body h6,
+.xp-body p,
+.xp-body span {
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
 }
 
 /* Footer-Stil für Windows XP */
 .xp-footer {
-    background-color: #d4d0c8;
-    border-top: 1px solid #808080;
+    background-color: #444152;
+    border-bottom: 2px solid #353233;
     padding: 10px;
     text-align: center;
+    color: #ffffff;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 400;
+}
+
+.xp-footer p {
+    color: #ffffff;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 400;
 }
 
 /* Programm-Footer-Stil für Windows XP */
 .xp-program-footer {
-    background-color: #0f87f6;
-    border-top: 1px solid #045bac;
+    background-color: #444152;
+    border-bottom: 2px solid #353233;
     padding: 10px;
     text-align: center;
     color: white;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 400;
+}
+
+.xp-program-footer p {
+    color: #ffffff;
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 400;
 }
 
 /* Button-Stil für Windows XP */
 .xp-btn {
-    background: linear-gradient(to bottom, #e4e4e4, #d4d0c8);
-    border: 1px solid #808080;
+    background: linear-gradient(to bottom, #C41E3A, #A01629);
+    border: 2px solid #8B1529;
     border-radius: 3px;
-    color: #000;
+    color: #ffffff;
     padding: 5px 10px;
     text-align: center;
     cursor: pointer;
     margin-bottom: 10px;
+    font-weight: 400;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .xp-btn:hover {
-    background: linear-gradient(to bottom, #d4d0c8, #e4e4e4);
+    background: linear-gradient(to bottom, #D63649, #C41E3A);
 }
 
 .xp-btn:active {
-    background: linear-gradient(to bottom, #d4d0c8, #c0c0c0);
-    border: 1px solid #404040;
+    background: linear-gradient(to bottom, #A01629, #7a1220);
+    border: 2px solid #5a0f18;
 }
 
 /* Programm-Button-Stil für Windows XP */
 .xp-program-btn {
-    background: linear-gradient(to bottom, #0f87f6, #0f73f6);
-    border: 1px solid #045bac;
+    background: linear-gradient(to bottom, #C41E3A, #A01629);
+    border: 2px solid #8B1529;
     border-radius: 3px;
     color: white;
     padding: 5px;
     text-align: center;
     cursor: pointer;
     /* margin: 5px; */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    font-weight: 400;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .xp-program-btn:hover {
-    background: linear-gradient(to bottom, #0f73f6, #0f87f6);
+    background: linear-gradient(to bottom, #D63649, #C41E3A);
 }
 
 .xp-program-btn:active {
-    background: linear-gradient(to bottom, #0f73f6, #0e62e4);
-    border: 1px solid #054785;
+    background: linear-gradient(to bottom, #A01629, #7a1220);
+    border: 2px solid #5a0f18;
 }
 
 /* Close-Button-Stil für Windows XP */
 .xp-btn-close {
-    background: linear-gradient(to bottom, #e4e4e4, #d4d0c8);
-    border: 2px solid black;
+    background: linear-gradient(to bottom, #C41E3A, #A01629);
+    border: 2px solid #8B1529;
     border-radius: 3px;
-    color: black;
+    color: #ffffff;
     width: 30px;
     height: 30px;
     position: relative;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .xp-btn-close::before, .xp-btn-close::after {
@@ -127,7 +204,7 @@ h1, h2, h3, h4, h5, h6 {
     left: 50%;
     width: 12px;
     height: 2px;
-    background-color: black;
+    background-color: #ffffff;
 }
 
 .xp-btn-close::before {
@@ -139,17 +216,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .xp-btn-close:hover {
-    background-color: #a5a5a5;
+    background-color: #D63649;
 }
 
 .xp-btn-close:active {
-    background-color: #8d8d8d;
+    background-color: #8B1529;
 }
 
 /* Programm-Close-Button-Stil für Windows XP */
 .xp-program-btn-close {
-    background: linear-gradient(to bottom, #f82b2b, red);
-    border: 2px solid white;
+    background: linear-gradient(to bottom, #C41E3A, #A01629);
+    border: 2px solid #ffffff;
     border-radius: 3px;
     margin: 10px;
     color: white;
@@ -157,7 +234,7 @@ h1, h2, h3, h4, h5, h6 {
     height: 30px;
     position: relative;
     cursor: pointer;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .xp-program-btn-close::before, .xp-program-btn-close::after {
@@ -179,28 +256,27 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .xp-program-btn-close:hover {
-    background-color: darkred;
+    background-color: #D63649;
 }
 
 .xp-program-btn-close:active {
-    background-color: #a00000;
-    border: 2px solid #808080;
+    background-color: #A01629;
+    border: 2px solid #8B1529;
 }
 
 /* Logo-Stil */
 .app-logo {
-    max-width: 200px;
+    max-width: 320px;
     border-radius: 100px;
     margin-bottom: 20px;
 }
 
 /* Styling für Bootstrap-Cards */
 .card {
-    background-color: #e4e4e4;
-    border: 2px solid;
-    border-color: #dfdfdf #808080 #808080 #dfdfdf;
+    background-color: #ffffff;
+    border: 2px solid #C41E3A;
     border-radius: 3px;
-    box-shadow: 1px 1px 0 #ffffff inset, -1px -1px 0 #dfdfdf inset;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.15s ease;
     margin-bottom: 20px;
@@ -209,56 +285,68 @@ h1, h2, h3, h4, h5, h6 {
 
 .card:hover {
     transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(196, 30, 58, 0.3);
 }
 
 .card-header {
-    background-color: #d4d0c8;
-    border-bottom: 1px solid #808080;
-    font-family: Trebuchet MS, sans-serif;
+    background-color: #C41E3A;
+    border-bottom: 2px solid #8B1529;
+    font-family: 'Open Sans', sans-serif;
     text-align: center;
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .card-body {
-    color: #000;
-    font-family: Tahoma, sans-serif;
+    color: #333333;
+    font-family: 'Open Sans', sans-serif;
     font-size: 14px;
+    font-weight: 300;
     padding: 0;
+    background-color: #ffffff;
 }
 
 .card-title {
-    background-color: #d4d0c8;
-    border-bottom: 1px solid #808080;
+    background-color: #C41E3A;
+    border-bottom: 2px solid #8B1529;
     margin-bottom: 10px;
     padding: 8px;
     font-size: 16px;
-    font-weight: bold;
+    font-weight: 600;
+    color: #ffffff;
+    font-family: 'Open Sans', sans-serif;
 }
 
 .card-text {
     font-size: 14px;
-    color: black;
+    color: #333333;
     padding: 10px;
+    font-weight: 300;
 }
 
 /* Styling für das Popover */
 .popover {
-    background-color: #f8f9fa;
+    background-color: #ffffff;
     border-radius: 3px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid #C41E3A;
   }
   
 .popover-header {
-background-color: #d4d0c8;
-border-bottom: 1px solid #808080;
+background-color: #C41E3A;
+border-bottom: 2px solid #8B1529;
 border-radius: 0;
-color: #000;
-font-family: Trebuchet MS;
+color: #ffffff;
+font-family: 'Open Sans', sans-serif;
 text-align: center;
+font-weight: 600;
 }
 
 .popover-body {
-color: #000;
-font-family: Tahoma, sans-serif;
+color: #333333;
+font-family: 'Open Sans', sans-serif;
 font-size: 14px;
 padding: 10px;
+background-color: #ffffff;
+font-weight: 300;
 }

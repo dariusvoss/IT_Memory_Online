@@ -1,7 +1,10 @@
 .game-mode-container {
   border-radius: 10px;
-  background-color: beige;
+  background-color: #e7e7e7;
   width: 100%;
+  border: 2px solid #cccccc;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  color: #333333;
 }
 
 /* Mode Selection */
@@ -13,6 +16,8 @@
   min-height: auto;
   gap: 3rem;
   padding: 2rem;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
 }
 
 .button-group {
@@ -36,15 +41,17 @@
 
 .bonus-label {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 300;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
 }
 
 .bonus-switch {
   width: 62px;
   height: 34px;
-  border: 2px solid #7a7a7a;
+  border: 2px solid #cccccc;
   border-radius: 999px;
-  background: #cfcfcf;
+  background: #e0e0e0;
   position: relative;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -66,8 +73,8 @@
 }
 
 .bonus-switch.active {
-  background: #4da863;
-  border-color: #3f8c52;
+  background: #C41E3A;
+  border-color: #A01629;
 }
 
 .bonus-switch.active::before {
@@ -75,7 +82,7 @@
 }
 
 .bonus-switch:focus-visible {
-  outline: 2px solid #1a5fb4;
+  outline: 2px solid #C41E3A;
   outline-offset: 2px;
 }
 
@@ -119,16 +126,18 @@
 
 .loading-screen h2 {
   font-size: 2rem;
-  font-weight: bold;
+  font-weight: 600;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
 }
 
 .spinner {
   width: 280px;
   height: 20px;
-  background-color: #f0f0f0;
-  border: 2px solid #808080;
-  border-right: 2px solid #dfdfdf;
-  border-bottom: 2px solid #dfdfdf;
+  background-color: #e0e0e0;
+  border: 2px solid #cccccc;
+  border-right: 2px solid #999999;
+  border-bottom: 2px solid #999999;
   border-radius: 2px;
   padding: 2px;
   box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.5);
@@ -145,18 +154,18 @@
   width: 100%;
   background: linear-gradient(
     90deg,
-    #0078d4 0px,
-    #0078d4 8px,
-    #f0f0f0 8px,
-    #f0f0f0 10px,
-    #0078d4 10px,
-    #0078d4 18px,
-    #f0f0f0 18px,
-    #f0f0f0 20px,
-    #0078d4 20px,
-    #0078d4 28px,
-    #f0f0f0 28px,
-    #f0f0f0 350px
+    #C41E3A 0px,
+    #C41E3A 8px,
+    #e0e0e0 8px,
+    #e0e0e0 10px,
+    #C41E3A 10px,
+    #C41E3A 18px,
+    #e0e0e0 18px,
+    #e0e0e0 20px,
+    #C41E3A 20px,
+    #C41E3A 28px,
+    #e0e0e0 28px,
+    #e0e0e0 350px
   );
   animation: windowsXpProgress 1.5s linear infinite;
   border-radius: 1px;
@@ -173,4 +182,7 @@
 
 .loading-screen p {
   font-size: 1.2rem;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
 }

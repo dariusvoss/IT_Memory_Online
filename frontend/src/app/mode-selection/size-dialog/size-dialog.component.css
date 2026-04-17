@@ -1,0 +1,34 @@
+/* Size Dialog Styling */
+:host ::ng-deep .size-dialog {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  font-family: 'Open Sans', sans-serif !important;
+  font-weight: 300 !important;
+}
+
+:host ::ng-deep .size-dialog .mat-mdc-dialog-container {
+  background-color: #ffffff !important;
+}
+
+:host ::ng-deep .size-dialog h4,
+:host ::ng-deep .size-dialog h5,
+:host ::ng-deep .size-dialog h6,
+:host ::ng-deep .size-dialog p {
+  color: #333333 !important;
+  font-family: 'Open Sans', sans-serif !important;
+  font-weight: 300 !important;
+}
+
+:host ::ng-deep .size-dialog .mat-mdc-button,
+:host ::ng-deep .size-dialog .btn {
+  background-color: #C41E3A !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-family: 'Open Sans', sans-serif !important;
+  font-weight: 400 !important;
+}
+
+:host ::ng-deep .size-dialog .mat-mdc-button:hover,
+:host ::ng-deep .size-dialog .btn:hover {
+  background-color: #D63649 !important;
+}

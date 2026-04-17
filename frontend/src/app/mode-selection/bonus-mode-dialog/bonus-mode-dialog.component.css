@@ -1,6 +1,9 @@
 .message,
 .details {
   text-align: center;
+  color: #333333;
+  font-family: 'Open Sans', sans-serif;
+  font-weight: 300;
 }
 
 .message {

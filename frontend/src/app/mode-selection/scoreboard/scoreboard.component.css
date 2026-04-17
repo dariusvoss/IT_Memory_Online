@@ -1,3 +1,14 @@
+.scoreboard {
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
+}
+
+.scoreboard .modal-header h2 {
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
 .scoreboard-table-wrapper {
     max-height: 380px;
     overflow-y: auto;
@@ -7,21 +18,27 @@
     width: 100%;
     border-collapse: collapse;
     border-spacing: 0 10px;
+    font-family: 'Open Sans', sans-serif;
+    font-weight: 300;
 }
 
 .scoreboard-table th, .scoreboard-table td {
     border: 1px solid #ddd;
     padding: 8px;
     text-align: center;
+    color: #333333;
+    font-weight: 300;
 }
 
 .scoreboard-table th {
-    background-color: #f2f2f2;
+    background-color: #C41E3A;
     position: sticky;
     top: 0;
     z-index: 1;
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .scoreboard-table tbody tr {
-    border: none;
+    background-color: #ffffff;
 }
