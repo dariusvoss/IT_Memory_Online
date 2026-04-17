@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Zeitbonus">
+  <ellipse cx="64" cy="20" rx="30" ry="10" fill="#b8682f" stroke="#3d1d09" stroke-width="3"/>
+  <ellipse cx="64" cy="108" rx="30" ry="10" fill="#b8682f" stroke="#3d1d09" stroke-width="3"/>
+  <path d="M42 20 L86 20 C82 39 80 47 76 56 C71 66 71 77 76 88 C79 95 82 100 86 108 L42 108 C46 100 49 95 52 88 C57 77 57 66 52 56 C48 47 46 39 42 20 Z" fill="#f4f8ff" stroke="#3d1d09" stroke-width="3"/>
+  <path d="M50 36 C60 42 68 44 78 46 C73 52 69 58 64 64 C59 58 55 52 50 36 Z" fill="#efbf42"/>
+  <path d="M52 88 C62 82 70 80 79 78 C75 88 68 95 64 100 C59 95 55 91 52 88 Z" fill="#efbf42"/>
+  <rect x="61" y="50" width="6" height="26" rx="3" fill="#efbf42"/>
+</svg>

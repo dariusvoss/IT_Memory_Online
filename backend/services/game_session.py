@@ -536,13 +536,33 @@ class GameSession:
             "medium_preview_card_index": medium_preview_index,
             "medium_attempts_remaining": self.player_card_medium_attempts.get(player_id, 0),
             "can_trigger": bool(
-                not self.finished
-                and self.current_player_turn == player_id
-                and len(ready_effects) > 0
+                len(ready_effects) > 0
+                and self._can_player_activate_bonus_effect(player_id)
             ),
             "notifications": notifications,
             "time_bonus_seconds_used": self.time_bonus_seconds_used,
         }
+
+    def _can_player_activate_bonus_effect(self, player_id: str) -> bool:
+        if self.finished:
+            return False
+
+        if player_id not in self.player_ids:
+            return False
+
+        if self.current_player_turn != player_id:
+            return False
+
+        if len(self.selected_cards) >= 2:
+            return False
+
+        if len(self.last_unmatched_cards) > 0:
+            return False
+
+        if self.player_private_scout_pending.get(player_id, False):
+            return False
+
+        return True
 
     def trigger_bonus_effect(self, player_id: str, effect_id: Optional[str] = None) -> Dict[str, Any]:
         if not self.bonus_effekt:
@@ -553,6 +573,9 @@ class GameSession:
 
         if player_id != self.current_player_turn:
             raise ValueError("Bonus effect can only be triggered during your turn")
+
+        if not self._can_player_activate_bonus_effect(player_id):
+            raise ValueError("Bonus-Effekte können nur aktiviert werden, wenn du Karten umdrehen darfst.")
 
         ready_effects = self.player_ready_effects.get(player_id, [])
         if not ready_effects:

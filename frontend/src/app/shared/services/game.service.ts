@@ -152,7 +152,10 @@ export class GameService {
   }
 
   public get canTriggerBonusEffect(): boolean {
-    return !!this.currentBonusState?.can_trigger;
+    return !!this.currentBonusState?.can_trigger
+      && !this.isProcessingLocalAction
+      && this.selectedCards.length < 2
+      && !this.pendingPrivateScoutReveal;
   }
 
   public get canRevealPrivateScoutCard(): boolean {
@@ -1161,8 +1164,12 @@ export class GameService {
     }
   }
 
-  public triggerReadyBonusEffect(): void {
-    const readyEffect = this.currentBonusState?.ready_effects?.[0];
+  public triggerReadyBonusEffect(effectId?: string): void {
+    const readyEffects = this.currentBonusState?.ready_effects ?? [];
+    const readyEffect = effectId
+      ? readyEffects.find((effect) => effect.id === effectId)
+      : readyEffects[0];
+
     if (!readyEffect || !this.canTriggerBonusEffect) {
       return;
     }

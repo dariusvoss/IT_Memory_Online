@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Wirbelwind">
+  <path d="M30 32 C42 20 78 18 96 28 C106 34 106 46 92 48 C78 50 56 44 46 50 C37 56 43 66 58 68 C76 70 90 74 89 84 C88 95 72 102 55 102 C44 102 34 99 28 94" fill="none" stroke="#7b7f87" stroke-width="7" stroke-linecap="round"/>
+  <path d="M40 46 C52 38 76 38 86 44 C92 48 89 54 78 55 C67 56 52 54 47 59" fill="none" stroke="#a6abb5" stroke-width="6" stroke-linecap="round"/>
+  <path d="M46 62 C57 58 71 60 76 66 C80 70 74 75 65 76 C57 77 51 78 49 82" fill="none" stroke="#8f949d" stroke-width="5" stroke-linecap="round"/>
+  <path d="M56 82 C62 80 68 81 69 85 C70 89 66 93 63 98" fill="none" stroke="#7b7f87" stroke-width="4" stroke-linecap="round"/>
+</svg>

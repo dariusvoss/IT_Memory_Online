@@ -5,6 +5,24 @@ import { GameService } from '../../shared/services/game.service';
 import { TimerService } from '../../shared/services/timer.service';
 import { Subscription } from 'rxjs';
 
+interface BonusEffectSlot {
+  id: string;
+  label: string;
+  description: string;
+  iconPath: string;
+  isReady: boolean;
+  isUsed: boolean;
+  isAssigned: boolean;
+  isClickable: boolean;
+}
+
+interface BonusEffectCatalogEntry {
+  id: string;
+  label: string;
+  description: string;
+  iconPath: string;
+}
+
 @Component({
   selector: 'app-dialog',
   imports: [BoardComponent],
@@ -20,6 +38,40 @@ export class GameDialogComponent implements OnInit, OnDestroy {
   private currentTime: number = 0;
   private gameEndedSubscription: Subscription = new Subscription;
   currentImage: string ='../assets/icons/Stop.png';
+  readonly bonusPlaceholderPath = 'assets/icons/effect-placeholder.svg';
+
+  private readonly bonusEffectCatalog: BonusEffectCatalogEntry[] = [
+    {
+      id: 'time_bonus',
+      label: 'Zeitbonus',
+      description: 'Reduziert deine aktuelle Zeit.',
+      iconPath: 'assets/icons/time_bonus.svg'
+    },
+    {
+      id: 'skip_turn',
+      label: 'Aussetzen',
+      description: 'Gegner setzt die nächste Runde aus.',
+      iconPath: 'assets/icons/skip_turn.svg'
+    },
+    {
+      id: 'scouting_bonus',
+      label: 'Scouting-Bonus',
+      description: 'Zusätzliche Karte nur für dich aufdecken.',
+      iconPath: 'assets/icons/scouting_bonus.svg'
+    },
+    {
+      id: 'card_medium',
+      label: 'Kartenmedium',
+      description: 'Partnerkarte privat sehen.',
+      iconPath: 'assets/icons/card_medium.svg'
+    },
+    {
+      id: 'whirlwind',
+      label: 'Wirbelwind',
+      description: 'Mischt alle Karten neu durch.',
+      iconPath: 'assets/icons/whirlwind.svg'
+    }
+  ];
 
   constructor(public activeModal: NgbActiveModal) {}
 
@@ -76,8 +128,72 @@ export class GameDialogComponent implements OnInit, OnDestroy {
     return this.gameService.readyBonusEffectLabel;
   }
 
+  get showBonusSidebar(): boolean {
+    return this.gameService.showManualBonusButton;
+  }
+
+  get bonusEffectSlots(): BonusEffectSlot[] {
+    const currentBonusState = this.gameService.currentBonusState;
+    const readyEffects = currentBonusState?.ready_effects ?? [];
+    const usedEffects = currentBonusState?.used_effects ?? [];
+    const readyEffectIds = new Set(readyEffects.map(effect => effect.id));
+    const usedEffectIds = new Set(usedEffects.map(effect => effect.id));
+
+    return this.bonusEffectCatalog
+      .filter((effect) => this.isEffectVisibleForCurrentMode(effect.id))
+      .map((effect) => {
+      const matchingReadyEffect = readyEffects.find(readyEffect => readyEffect.id === effect.id);
+      const matchingUsedEffect = usedEffects.find(usedEffect => usedEffect.id === effect.id);
+      const isReady = readyEffectIds.has(effect.id);
+      const isUsed = usedEffectIds.has(effect.id);
+      const isAssigned = isReady || isUsed;
+
+      return {
+        id: effect.id,
+        label: matchingReadyEffect?.label ?? matchingUsedEffect?.label ?? effect.label,
+        description: matchingReadyEffect?.description ?? matchingUsedEffect?.description ?? effect.description,
+        iconPath: effect.iconPath,
+        isReady,
+        isUsed,
+        isAssigned,
+        isClickable: isReady && this.canTriggerBonusEffect && !isUsed
+      };
+    });
+  }
+
+  private isEffectVisibleForCurrentMode(effectId: string): boolean {
+    const isTimeMode = this.gameService.gameModeGetter === 'singleplayer_time';
+
+    if (effectId === 'time_bonus') {
+      return isTimeMode;
+    }
+
+    if (effectId === 'skip_turn') {
+      return !isTimeMode;
+    }
+
+    return true;
+  }
+
   triggerBonusEffect(): void {
     this.gameService.triggerReadyBonusEffect();
+  }
+
+  triggerBonusEffectById(effectId: string): void {
+    if (!this.canTriggerBonusEffect) {
+      return;
+    }
+
+    this.gameService.triggerReadyBonusEffect(effectId);
+  }
+
+  handleBonusImageError(event: Event): void {
+    const target = event.target as HTMLImageElement | null;
+    if (!target || target.src.endsWith('effect-placeholder.svg')) {
+      return;
+    }
+
+    target.src = this.bonusPlaceholderPath;
   }
 
   stopResumeTimerBtn() {
