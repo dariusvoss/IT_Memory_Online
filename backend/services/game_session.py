@@ -253,16 +253,13 @@ class GameSession:
             self.player_card_medium_preview[pid] = index_mapping.get(preview_idx)
 
         bot_memory_cleared = False
-        if self.bot_ai:
-            self.bot_ai.remap_memory_positions(index_mapping)
-
-            if (
-                triggered_by_player_id == 'bot'
-                and self.game_mode == GameMode.SINGLEPLAYER_AI
-                and self.difficulty in ['Mittel', 'Schwer']
+        if (self.bot_ai
+            and self.game_mode == GameMode.SINGLEPLAYER_AI
+            and self.difficulty in ['Mittel', 'Schwer']
             ):
-                self.bot_ai.clear_memory()
-                bot_memory_cleared = True
+            self.bot_ai.clear_memory()
+            bot_memory_cleared = True
+            # print(f"After potential bot memory clear: {self.bot_ai.get_memory_status()}")
 
         return {
             "shuffle_applied": True,
