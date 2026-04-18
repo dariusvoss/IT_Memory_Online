@@ -12,7 +12,10 @@
     Möchtest du diese Runde mit Bonuseffekten spielen?
   </p>
   <p class="details">
-    Du entscheidest selbst, ob und wann du einen zugewiesenen Effekt auslöst. In Spieler vs. Bot verwendet nur der Bot seine Effekte automatisch.
+    Du entscheidest selbst, ob und wann du einen zugewiesenen Effekt auslöst.
+    @if (showBotAutoUseInfo) {
+      <span> In Spieler vs. Bot verwendet nur der Bot seine Effekte automatisch.</span>
+    }
   </p>
 </div>
 

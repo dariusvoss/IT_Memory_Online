@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import random
 from typing import Dict, List
 
+from config import (
+    BONUS_BLINDGAENGER_COUNT,
+    BONUS_BLINDGAENGER_MULTIPLIER_BY_BOARD_SIZE,
+)
 from models import GameMode
 
 
 BONUS_TRIGGER_INTERVAL = 3
 TIME_BONUS_SECONDS = 15
+BLINDGAENGER_EFFECT_ID = "blindgaenger"
 
 
 @dataclass(frozen=True)
@@ -110,7 +116,7 @@ def get_bonus_effect_definition(effect_id: str) -> BonusEffectDefinition:
     return BONUS_EFFECT_DEFINITIONS[effect_id]
 
 
-def build_effect_pool(game_mode: GameMode) -> List[str]:
+def build_effect_pool(game_mode: GameMode, board_size: int) -> List[str]:
     resolved_effects: List[str] = []
 
     for effect in BASE_EFFECTS:
@@ -122,6 +128,13 @@ def build_effect_pool(game_mode: GameMode) -> List[str]:
         if resolved_effect_id and resolved_effect_id not in resolved_effects:
             resolved_effects.append(resolved_effect_id)
 
+    multiplier = BONUS_BLINDGAENGER_MULTIPLIER_BY_BOARD_SIZE.get(board_size, 1)
+    blindgaenger_count = BONUS_BLINDGAENGER_COUNT * multiplier
+    if blindgaenger_count > 0:
+        resolved_effects.extend([BLINDGAENGER_EFFECT_ID] * blindgaenger_count)
+
+    random.shuffle(resolved_effects)
+    print(f"Built effect pool for mode {game_mode} and board size {board_size}: {resolved_effects}")
     return resolved_effects
 
 

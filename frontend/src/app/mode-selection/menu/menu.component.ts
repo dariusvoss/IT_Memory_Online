@@ -42,7 +42,7 @@ export class MenuComponent {
 
     modalRef_size.result.then(async (result) => {
       if (result) {
-        const selectedBonusMode = await this.chooseBonusMode();
+        const selectedBonusMode = await this.chooseBonusMode(mode === 'PvB');
         if (selectedBonusMode === null) {
           return;
         }
@@ -56,8 +56,9 @@ export class MenuComponent {
     });
   }
 
-  private async chooseBonusMode(): Promise<boolean | null> {
+  private async chooseBonusMode(showBotAutoUseInfo: boolean): Promise<boolean | null> {
     const modalRef = this.modalService.open(BonusModeDialogComponent, { size: 'md', centered: true });
+    modalRef.componentInstance.showBotAutoUseInfo = showBotAutoUseInfo;
     try {
       return await modalRef.result;
     } catch {

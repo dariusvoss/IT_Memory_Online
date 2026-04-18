@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import random
 from services.bot import BotAI
 from services.bonus_effects import (
+    BLINDGAENGER_EFFECT_ID,
     BONUS_TRIGGER_INTERVAL,
     build_effect_pool,
     get_bonus_effect_definition,
@@ -174,7 +175,7 @@ class GameSession:
             self.bot_ai.initialize(self.board_size)
 
     def _initialize_bonus_state(self) -> None:
-        effect_pool = build_effect_pool(self.game_mode) if self.bonus_effekt else []
+        effect_pool = build_effect_pool(self.game_mode, self.board_size) if self.bonus_effekt else []
         self.player_effect_pool = {pid: list(effect_pool) for pid in self.player_ids}
         self.player_ready_effects = {pid: [] for pid in self.player_ids}
         self.player_used_effects = {pid: [] for pid in self.player_ids}
@@ -496,6 +497,10 @@ class GameSession:
 
         effect_id = self.bonus_random.choice(effect_pool)
         effect_pool.remove(effect_id)
+
+        if effect_id == BLINDGAENGER_EFFECT_ID:
+            return None
+
         definition = get_bonus_effect_definition(effect_id)
 
         should_auto_trigger = definition.auto_trigger or player_id == 'bot'

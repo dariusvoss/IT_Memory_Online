@@ -53,6 +53,20 @@ BOT_MEMORY_SIZES = {
     64: 10    # 10 cards for large deck
 }
 
+# Bonus effects configuration
+# Number of dud entries mixed into each player's effect pool.
+# Higher values reduce the chance of receiving a real bonus effect.
+BONUS_BLINDGAENGER_COUNT = 4
+
+# Per board size multiplier for dud count scaling.
+# Effective blindgaenger count = BONUS_BLINDGAENGER_COUNT * multiplier.
+BONUS_BLINDGAENGER_MULTIPLIER_BY_BOARD_SIZE = {
+    16: 1,
+    36: 2,
+    64: 3,
+}
+
+
 # Ranking Thresholds
 RANK_THRESHOLDS = {
     16: {  # Small deck

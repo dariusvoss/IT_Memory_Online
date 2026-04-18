@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 @Component({
@@ -8,6 +8,8 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
   styleUrl: './bonus-mode-dialog.component.css'
 })
 export class BonusModeDialogComponent {
+  @Input() showBotAutoUseInfo = false;
+
   constructor(public activeModal: NgbActiveModal) {}
 
   chooseBonusMode(enabled: boolean): void {
