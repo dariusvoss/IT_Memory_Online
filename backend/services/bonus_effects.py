@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import random
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from config import (
     BONUS_BLINDGAENGER_COUNT,
@@ -12,7 +12,11 @@ from models import GameMode
 
 
 BONUS_TRIGGER_INTERVAL = 3
-TIME_BONUS_SECONDS = 15
+TIME_BONUS_SECONDS_BY_BOARD_SIZE = {
+    16: 15,
+    36: 60,
+    64: 180,
+}
 BLINDGAENGER_EFFECT_ID = "blindgaenger"
 
 
@@ -69,11 +73,11 @@ BONUS_EFFECT_DEFINITIONS: Dict[str, BonusEffectDefinition] = {
     "time_bonus": BonusEffectDefinition(
         effect_id="time_bonus",
         label="Zeitbonus",
-        description=f"Reduziert deine aktuelle Zeit um {TIME_BONUS_SECONDS} Sekunden.",
+        description="Reduziert deine aktuelle Zeit.",
         category="time",
         utility_weight=5,
         auto_trigger=False,
-        metadata={"seconds": TIME_BONUS_SECONDS},
+        metadata={"seconds": TIME_BONUS_SECONDS_BY_BOARD_SIZE[16]},
     ),
     "skip_turn": BonusEffectDefinition(
         effect_id="skip_turn",
@@ -106,14 +110,41 @@ BONUS_EFFECT_DEFINITIONS: Dict[str, BonusEffectDefinition] = {
         category="board_control",
         utility_weight=4,
         auto_trigger=False,
-    ),
+    )
 }
 
 
-def get_bonus_effect_definition(effect_id: str) -> BonusEffectDefinition:
+def get_time_bonus_seconds(board_size: int) -> int:
+    return TIME_BONUS_SECONDS_BY_BOARD_SIZE.get(board_size, TIME_BONUS_SECONDS_BY_BOARD_SIZE[16])
+
+
+def _format_time_bonus_description(seconds: int) -> str:
+    if seconds == 60:
+        return "Reduziert deine aktuelle Zeit um 1 Minute."
+    if seconds % 60 == 0 and seconds > 60:
+        minutes = seconds // 60
+        return f"Reduziert deine aktuelle Zeit um {minutes} Minuten."
+    return f"Reduziert deine aktuelle Zeit um {seconds} Sekunden."
+
+
+def get_bonus_effect_definition(effect_id: str, board_size: Optional[int] = None) -> BonusEffectDefinition:
     if effect_id not in BONUS_EFFECT_DEFINITIONS:
         raise ValueError(f"Unknown bonus effect: {effect_id}")
-    return BONUS_EFFECT_DEFINITIONS[effect_id]
+
+    base_definition = BONUS_EFFECT_DEFINITIONS[effect_id]
+    if effect_id != "time_bonus" or board_size is None:
+        return base_definition
+
+    seconds = get_time_bonus_seconds(board_size)
+    return BonusEffectDefinition(
+        effect_id=base_definition.effect_id,
+        label=base_definition.label,
+        description=_format_time_bonus_description(seconds),
+        category=base_definition.category,
+        utility_weight=base_definition.utility_weight,
+        auto_trigger=base_definition.auto_trigger,
+        metadata={"seconds": seconds},
+    )
 
 
 def build_effect_pool(game_mode: GameMode, board_size: int) -> List[str]:
@@ -134,9 +165,9 @@ def build_effect_pool(game_mode: GameMode, board_size: int) -> List[str]:
         resolved_effects.extend([BLINDGAENGER_EFFECT_ID] * blindgaenger_count)
 
     random.shuffle(resolved_effects)
-    print(f"Built effect pool for mode {game_mode} and board size {board_size}: {resolved_effects}")
+    # print(f"Built effect pool for mode {game_mode} and board size {board_size}: {resolved_effects}")
     return resolved_effects
 
 
-def serialize_bonus_effect(effect_id: str) -> Dict:
-    return get_bonus_effect_definition(effect_id).to_public_dict()
+def serialize_bonus_effect(effect_id: str, board_size: Optional[int] = None) -> Dict:
+    return get_bonus_effect_definition(effect_id, board_size).to_public_dict()

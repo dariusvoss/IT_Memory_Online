@@ -501,7 +501,7 @@ class GameSession:
         if effect_id == BLINDGAENGER_EFFECT_ID:
             return None
 
-        definition = get_bonus_effect_definition(effect_id)
+        definition = get_bonus_effect_definition(effect_id, self.board_size)
 
         should_auto_trigger = definition.auto_trigger or player_id == 'bot'
 
@@ -532,8 +532,8 @@ class GameSession:
         return {
             "bonus_enabled": self.bonus_effekt,
             "trigger_interval": self.bonus_trigger_interval,
-            "ready_effects": [serialize_bonus_effect(effect_id) for effect_id in ready_effects],
-            "used_effects": [serialize_bonus_effect(effect_id) for effect_id in used_effects],
+            "ready_effects": [serialize_bonus_effect(effect_id, self.board_size) for effect_id in ready_effects],
+            "used_effects": [serialize_bonus_effect(effect_id, self.board_size) for effect_id in used_effects],
             "remaining_pool_size": len(self.player_effect_pool.get(player_id, [])),
             "scouting_charge_count": self.player_scouting_charges.get(player_id, 0),
             "scouting_reveal_available": self.player_private_scout_pending.get(player_id, False),
@@ -603,7 +603,7 @@ class GameSession:
         assignment_round: int,
         auto_assigned: bool = False,
     ) -> Dict[str, Any]:
-        definition = get_bonus_effect_definition(effect_id)
+        definition = get_bonus_effect_definition(effect_id, self.board_size)
 
         if effect_id not in self.player_used_effects[player_id]:
             self.player_used_effects[player_id].append(effect_id)
@@ -723,7 +723,7 @@ class GameSession:
         effect_id: str,
         assignment_round: int,
     ) -> None:
-        definition = get_bonus_effect_definition(effect_id)
+        definition = get_bonus_effect_definition(effect_id, self.board_size)
         self.bonus_event_counter += 1
 
         if event_type == "effect_ready":
@@ -754,7 +754,7 @@ class GameSession:
     ) -> None:
         """Create a notification for a player affected by skip_turn effect."""
         self.bonus_event_counter += 1
-        definition = get_bonus_effect_definition("skip_turn")
+        definition = get_bonus_effect_definition("skip_turn", self.board_size)
 
         self.player_bonus_notifications[player_id].append(
             {
@@ -774,7 +774,7 @@ class GameSession:
     ) -> None:
         """Create a notification for players affected by a whirlwind effect."""
         self.bonus_event_counter += 1
-        definition = get_bonus_effect_definition("whirlwind")
+        definition = get_bonus_effect_definition("whirlwind", self.board_size)
 
         self.player_bonus_notifications[player_id].append(
             {
