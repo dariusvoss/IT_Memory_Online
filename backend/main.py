@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request, Body, Path, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict
+import logging
 import json
 import os
 from datetime import datetime
@@ -9,7 +10,10 @@ from fastapi.responses import JSONResponse
 from services.matchmaker import matchmaker, Match
 from services.session_manager import GameSessionManager
 from models import BonusTriggerRequest, GameRecord, CreateGameRequest, FlipCardRequest, GameMode, GameStatus
-from config import CORS_ORIGINS, API_PREFIX, API_VERSION
+from config import CORS_ORIGINS, API_PREFIX, API_VERSION, HOST, PORT
+from logging_config import setup_logging
+
+logger = setup_logging()
 
 app = FastAPI(title="Memory Game Backend", version=API_VERSION)
 
@@ -21,6 +25,24 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log every request/response cycle for audit and troubleshooting."""
+    logger.info("Request started: %s %s", request.method, request.url.path)
+    try:
+        response = await call_next(request)
+        logger.info(
+            "Request finished: %s %s -> %s",
+            request.method,
+            request.url.path,
+            response.status_code,
+        )
+        return response
+    except Exception:
+        logger.exception("Unhandled error during request: %s %s", request.method, request.url.path)
+        raise
 
 # Initialize services
 session_manager = GameSessionManager() #(session_timeout_minutes=30)
@@ -837,6 +859,7 @@ def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
+    logger.warning("HTTPException on %s: %s", request.url.path, exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
         content={"status": "error", "message": exc.detail}
@@ -844,5 +867,5 @@ async def http_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host=HOST, port=PORT, log_config=None)
 

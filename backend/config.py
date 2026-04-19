@@ -98,6 +98,11 @@ HOST = "0.0.0.0"
 PORT = 8000
 DEBUG = False
 
+# Logging Configuration
+LOG_DIR = "logs"
+LOG_FILE_BASENAME = "backend.log"
+LOG_RETENTION_DAYS = 30
+
 # CORS Configuration
 CORS_ORIGINS = ["*"]
 CORS_CREDENTIALS = True
