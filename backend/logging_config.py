@@ -1,17 +1,22 @@
-"""Central logging configuration for the backend application."""
+"""Mirror real console output (stdout/stderr) into daily log files."""
 
-import logging
+import atexit
 import os
+import re
+import sys
+import threading
 from datetime import datetime, timedelta
 
 from config import LOG_DIR, LOG_FILE_BASENAME, LOG_RETENTION_DAYS
 
 
-class DailyFileHandler(logging.Handler):
-    """Write logs into a separate file per day and rotate automatically."""
+ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
+
+
+class _DailyLogFile:
+    """Handle daily file creation and retention cleanup."""
 
     def __init__(self, log_dir: str, base_filename: str, retention_days: int):
-        super().__init__()
         self.log_dir = log_dir
         self.retention_days = retention_days
 
@@ -19,15 +24,16 @@ class DailyFileHandler(logging.Handler):
         self.file_prefix = root
         self.file_ext = ext or ".log"
 
-        self.current_date = ""
-        self.stream = None
+        self._current_date = ""
+        self._stream = None
+        self._lock = threading.RLock()
+        self._at_line_start = True
 
-    def _get_file_path(self, date_str: str) -> str:
+    def _build_path(self, date_str: str) -> str:
         return os.path.join(self.log_dir, f"{self.file_prefix}-{date_str}{self.file_ext}")
 
     def _cleanup_old_files(self):
         cutoff = datetime.now() - timedelta(days=self.retention_days)
-
         for filename in os.listdir(self.log_dir):
             if not filename.startswith(f"{self.file_prefix}-") or not filename.endswith(self.file_ext):
                 continue
@@ -42,70 +48,108 @@ class DailyFileHandler(logging.Handler):
                 try:
                     os.remove(os.path.join(self.log_dir, filename))
                 except OSError:
-                    # Best effort cleanup should never break logging.
                     pass
 
-    def _ensure_stream(self):
-        today = datetime.now().strftime("%Y-%m-%d")
-        if today == self.current_date and self.stream is not None:
-            return
+    def write(self, data: str):
+        with self._lock:
+            today = datetime.now().strftime("%Y-%m-%d")
 
-        if self.stream is not None:
-            self.stream.close()
+            if today != self._current_date or self._stream is None:
+                if self._stream is not None:
+                    self._stream.close()
+                self._current_date = today
+                self._stream = open(self._build_path(today), "a", encoding="utf-8")
+                self._cleanup_old_files()
 
-        self.current_date = today
-        self.stream = open(self._get_file_path(today), "a", encoding="utf-8")
-        self._cleanup_old_files()
+            clean_data = ANSI_ESCAPE_RE.sub("", data)
+            self._stream.write(self._with_timestamp(clean_data))
+            self._stream.flush()
 
-    def emit(self, record: logging.LogRecord):
-        try:
-            self._ensure_stream()
-            msg = self.format(record)
-            self.stream.write(msg + "\n")
-            self.stream.flush()
-        except Exception:
-            self.handleError(record)
+    def _with_timestamp(self, data: str) -> str:
+        """Prefix each written log line with local datetime."""
+        if not data:
+            return data
+
+        parts = data.splitlines(keepends=True)
+        output = []
+
+        for part in parts:
+            if self._at_line_start and part:
+                ts = datetime.now().strftime("%H:%M:%S")
+                output.append(f"{ts} | ")
+
+            output.append(part)
+            self._at_line_start = part.endswith("\n")
+
+        return "".join(output)
+
+    def flush(self):
+        with self._lock:
+            if self._stream is not None:
+                self._stream.flush()
 
     def close(self):
-        if self.stream is not None:
-            self.stream.close()
-            self.stream = None
-        super().close()
+        with self._lock:
+            if self._stream is not None:
+                self._stream.close()
+                self._stream = None
 
 
-def setup_logging() -> logging.Logger:
-    """Configure console and daily rotating file logging."""
-    base_dir = os.path.dirname(__file__)
+class _TeeStream:
+    """Write output to original console stream and to daily file."""
+
+    def __init__(self, original_stream, daily_log_file: _DailyLogFile):
+        self._original_stream = original_stream
+        self._daily_log_file = daily_log_file
+
+    def write(self, data):
+        self._original_stream.write(data)
+        self._original_stream.flush()
+        try:
+            self._daily_log_file.write(data)
+        except Exception:
+            pass
+
+    def flush(self):
+        self._original_stream.flush()
+        try:
+            self._daily_log_file.flush()
+        except Exception:
+            pass
+
+    def fileno(self):
+        return self._original_stream.fileno()
+
+    def isatty(self):
+        return self._original_stream.isatty()
+
+    def __getattr__(self, item):
+        return getattr(self._original_stream, item)
+
+
+_installed = False
+_daily_log = None
+
+
+def setup_logging() -> None:
+    """Install stdout/stderr mirror once so file equals console output."""
+    global _installed
+    global _daily_log
+
+    if _installed:
+        return
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     log_dir = os.path.join(base_dir, LOG_DIR)
     os.makedirs(log_dir, exist_ok=True)
 
-    formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    _daily_log = _DailyLogFile(log_dir, LOG_FILE_BASENAME, LOG_RETENTION_DAYS)
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    if not isinstance(sys.stdout, _TeeStream):
+        sys.stdout = _TeeStream(sys.stdout, _daily_log)
+    if not isinstance(sys.stderr, _TeeStream):
+        sys.stderr = _TeeStream(sys.stderr, _daily_log)
 
-    # Avoid duplicate handlers when app reloads in development.
-    if root_logger.handlers:
-        root_logger.handlers.clear()
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-
-    file_handler = DailyFileHandler(
-        log_dir=log_dir,
-        base_filename=LOG_FILE_BASENAME,
-        retention_days=LOG_RETENTION_DAYS,
-    )
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(formatter)
-
-    root_logger.addHandler(console_handler)
-    root_logger.addHandler(file_handler)
-
-    app_logger = logging.getLogger("memory-backend")
-    app_logger.info("Logging initialized. Directory: %s", log_dir)
-    return app_logger
+    atexit.register(_daily_log.close)
+    _installed = True
+    print(f"Logging initialisiert. Verzeichnis: {log_dir}")

@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Body, Path, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict
-import logging
 import json
 import os
 from datetime import datetime
@@ -13,7 +12,7 @@ from models import BonusTriggerRequest, GameRecord, CreateGameRequest, FlipCardR
 from config import CORS_ORIGINS, API_PREFIX, API_VERSION, HOST, PORT
 from logging_config import setup_logging
 
-logger = setup_logging()
+setup_logging()
 
 app = FastAPI(title="Memory Game Backend", version=API_VERSION)
 
@@ -27,22 +26,6 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log every request/response cycle for audit and troubleshooting."""
-    logger.info("Request started: %s %s", request.method, request.url.path)
-    try:
-        response = await call_next(request)
-        logger.info(
-            "Request finished: %s %s -> %s",
-            request.method,
-            request.url.path,
-            response.status_code,
-        )
-        return response
-    except Exception:
-        logger.exception("Unhandled error during request: %s %s", request.method, request.url.path)
-        raise
 
 # Initialize services
 session_manager = GameSessionManager() #(session_timeout_minutes=30)
@@ -173,6 +156,7 @@ def finalize_move(session_id: str = Path(...), data: Optional[dict] = Body(defau
     Flips back unmatched cards and returns updated session state.
     """
     session = session_manager.get_session(session_id)
+    print(f"Finalizing move for session {session_id}")
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
@@ -859,7 +843,6 @@ def acknowledge_game_finished(session_id: str, data: dict = Body(...)):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    logger.warning("HTTPException on %s: %s", request.url.path, exc.detail)
     return JSONResponse(
         status_code=exc.status_code,
         content={"status": "error", "message": exc.detail}
@@ -867,5 +850,7 @@ async def http_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT, log_config=None)
+    # print(f"Starting Memory Game API on {HOST}:{PORT} with API prefix '{API_PREFIX}'")
+    uvicorn.run(app, host=HOST, port=PORT)
+    # print("Memory Game API stopped")
 
