@@ -3,11 +3,25 @@
     - Make size of logo responsive to screen size
 -->
 
-<div style="margin: 1%;">
-  <div style="text-align: center;">
-    <img src="assets/Memory-Logo.svg" alt="Logo" class="app-logo">
+<div>
+  <div class="ui-scale-toolbar">
+    <label for="app-scale-select">Ansicht:</label>
+    <select
+      id="app-scale-select"
+      [value]="uiScaleService.scale()"
+      (change)="onScaleChanged($any($event.target).value)"
+    >
+      <option *ngFor="let option of scaleOptions" [value]="option.value">{{ option.label }}</option>
+    </select>
   </div>
-  <h1 class="modal-title" style="text-align: center;">IT-Memory</h1>
-  <div [style.width.%]="containerWidth" style="margin: auto; border: 1px solid #000000; border-radius: 10px;">
-    <app-mode-selection (selectedModeChange)="onModeChanged($event)"></app-mode-selection>
+
+  <div style="margin: 1%;">
+    <div style="text-align: center;">
+      <img src="assets/Memory-Logo.svg" alt="Logo" class="app-logo">
+    </div>
+    <h1 class="modal-title" style="text-align: center;">IT-Memory</h1>
+    <div [style.width.%]="containerWidth" style="margin: auto; border: 1px solid #000000; border-radius: 10px;">
+      <app-mode-selection (selectedModeChange)="onModeChanged($event)"></app-mode-selection>
+    </div>
   </div>
+</div>

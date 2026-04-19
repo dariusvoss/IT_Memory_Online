@@ -28,7 +28,7 @@ class GameSessionManager:
     - Load sessions from storage
     """
     
-    def __init__(self, session_timeout_minutes: int = 30):
+    def __init__(self, session_timeout_minutes: int = 60):
         self.sessions: Dict[str, 'GameSession'] = {}
         self.session_timeout = timedelta(minutes=session_timeout_minutes)
     
