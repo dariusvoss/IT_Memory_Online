@@ -9,10 +9,10 @@ const path = require('path');
 const sharp = require('sharp');
 
 // === KONFIGURATION ===
-const INPUT_DIR = path.join(__dirname, 'src/assets/icons');
-const OUTPUT_DIR = path.join(__dirname, 'src/assets/icons-small');
-const TARGET_SIZE = 150; // Zielgröße (in Pixel)
-const QUALITY = 80; // Qualitätsstufe (0–100, nur für JPG/WebP)
+const INPUT_DIR = path.join(__dirname, 'src/assets/images/Th_OWL');
+const OUTPUT_DIR = path.join(__dirname, 'src/assets/images-small/Th_OWL');
+const TARGET_SIZE = 300; // Zielgröße (in Pixel)
+const QUALITY = 100; // Qualitätsstufe (0–100, nur für JPG/WebP)
 
 // === FUNKTIONEN ===
 
@@ -63,7 +63,7 @@ async function resizeImages() {
         .toFormat('webp', { quality: QUALITY })
         .toFile(outputPath.replace(/\.[^.]+$/, '.webp'));
 
-      console.log(`✅ ${relativePath} -> images-small/`);
+      console.log(`✅ ${relativePath} -> images-small/Th_OWL/${relativePath.replace(/\.[^.]+$/, '.webp')}`);
     } catch (err) {
       console.error(`⚠️ Fehler bei ${relativePath}:`, err);
     }

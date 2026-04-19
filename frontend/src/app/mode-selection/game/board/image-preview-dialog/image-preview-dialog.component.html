@@ -1,0 +1,16 @@
+<div class="modal-header xp-header">
+  <div class="position-relative preview-header">
+    <h4 class="modal-title">{{ imageTitle }}</h4>
+    <div class="position-absolute top-50 end-0 translate-middle-y">
+      <button type="button" class="xp-btn-close" aria-label="Close" (click)="closeDialog()"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-body xp-body preview-body">
+  <img
+    class="preview-image"
+    [src]="imageUrl"
+    [alt]="imageTitle"
+  />
+</div>

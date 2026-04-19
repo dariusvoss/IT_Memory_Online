@@ -22,8 +22,6 @@ export class MemoryCardComponent {
   @Output() cardClicked = new EventEmitter<void>();
 
   onClick() {
-    if (!this.flipped) {
-      this.cardClicked.emit();
-    }
+    this.cardClicked.emit();
   }
 }

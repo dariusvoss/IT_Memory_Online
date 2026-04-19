@@ -1,0 +1,26 @@
+.preview-header {
+  width: 100%;
+}
+
+.preview-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
+  padding: 1rem;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 75vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.preview-error {
+  margin: 0;
+  color: #333333;
+  text-align: center;
+}
