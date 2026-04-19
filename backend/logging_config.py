@@ -1,6 +1,7 @@
 """Mirror real console output (stdout/stderr) into daily log files."""
 
 import atexit
+import logging
 import os
 import re
 import sys
@@ -131,6 +132,31 @@ _installed = False
 _daily_log = None
 
 
+def _rebind_stream_handlers(old_stdout, old_stderr) -> None:
+    """Rebind existing StreamHandlers created before tee installation.
+
+    Uvicorn CLI configures logging before importing the app module.
+    Those handlers keep references to old stdio streams unless rebound.
+    """
+    candidates = [logging.getLogger()]
+    candidates.extend(
+        logger
+        for logger in logging.root.manager.loggerDict.values()
+        if isinstance(logger, logging.Logger)
+    )
+
+    for logger in candidates:
+        for handler in logger.handlers:
+            if not isinstance(handler, logging.StreamHandler):
+                continue
+
+            stream = getattr(handler, "stream", None)
+            if stream is old_stdout or stream is sys.__stdout__:
+                handler.setStream(sys.stdout)
+            elif stream is old_stderr or stream is sys.__stderr__:
+                handler.setStream(sys.stderr)
+
+
 def setup_logging() -> None:
     """Install stdout/stderr mirror once so file equals console output."""
     global _installed
@@ -143,12 +169,17 @@ def setup_logging() -> None:
     log_dir = os.path.join(base_dir, LOG_DIR)
     os.makedirs(log_dir, exist_ok=True)
 
+    old_stdout = sys.stdout
+    old_stderr = sys.stderr
+
     _daily_log = _DailyLogFile(log_dir, LOG_FILE_BASENAME, LOG_RETENTION_DAYS)
 
     if not isinstance(sys.stdout, _TeeStream):
         sys.stdout = _TeeStream(sys.stdout, _daily_log)
     if not isinstance(sys.stderr, _TeeStream):
         sys.stderr = _TeeStream(sys.stderr, _daily_log)
+
+    _rebind_stream_handlers(old_stdout, old_stderr)
 
     atexit.register(_daily_log.close)
     _installed = True

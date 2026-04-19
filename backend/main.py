@@ -156,7 +156,7 @@ def finalize_move(session_id: str = Path(...), data: Optional[dict] = Body(defau
     Flips back unmatched cards and returns updated session state.
     """
     session = session_manager.get_session(session_id)
-    print(f"Finalizing move for session {session_id}")
+    # print(f"Finalizing move for session {session_id}")
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
