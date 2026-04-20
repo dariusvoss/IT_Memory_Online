@@ -14,8 +14,8 @@ import { ImagePreviewDialogComponent } from './image-preview-dialog/image-previe
   template: `
     <div class="board" [class.whirlwind-active]="isWhirlwindAnimating" [ngStyle]="{'grid-template-columns': gridTemplateColumns, 'grid-template-rows': gridTemplateRows}">
       @for (card of cards; track card) {
-        <app-card 
-          style="display: flex; justify-content: center; align-items: center;"  
+        <app-card
+          style="display: flex; justify-content: center; align-items: center;"
           [image]="card.image"
           [cardId]="card.id"
           [flipped]="card.flipped"
@@ -70,7 +70,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   timerService: TimerService = inject(TimerService);
   gameDialog: GameDialogComponent = inject(GameDialogComponent);
   private modalService = inject(NgbModal);
-  
+
   private cardsSubscription: Subscription = new Subscription();
   private whirlwindSubscription: Subscription = new Subscription();
   private whirlwindAnimationTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,7 +80,7 @@ export class BoardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.cards = this.gameService.getCards();
     this.setGridTemplate();
-    
+
     // Subscribe to card updates from service
     this.cardsSubscription = this.gameService.cards$.subscribe(updatedCards => {
       this.cards = updatedCards;

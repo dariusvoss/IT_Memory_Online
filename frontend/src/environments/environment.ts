@@ -1,17 +1,17 @@
 
 
 // Backend API URLs
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:8000/api',
-  playerId: '',
-  useBonusDialogIfSlideOff: true
-};
-
 // export const environment = {
 //   production: false,
-//   apiUrl: 'https://memory.ipv64.de:8000/api',
+//   apiUrl: 'http://localhost:8000/api',
 //   playerId: '',
 //   useBonusDialogIfSlideOff: true
 // };
+
+export const environment = {
+  production: false,
+  apiUrl: 'https://memory.ipv64.de:8000/api',
+  playerId: '',
+  useBonusDialogIfSlideOff: true
+};
 
